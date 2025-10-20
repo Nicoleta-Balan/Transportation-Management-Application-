@@ -8,7 +8,7 @@ import java.time.format.DateTimeFormatter;
 public class HelloController {
     @GetMapping("/")
     public String hello() {
-        return "Test pentru proiect 2";
+        return "Test pentru proiect";
     }
 
     @GetMapping("/time")
