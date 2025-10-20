@@ -1,0 +1,54 @@
+name: Java Docker CI - Ubuntu Runner
+
+on:
+  push:
+
+    branches: [ "master" ]
+  pull_request:
+
+    branches: [ "master" ]
+
+jobs:
+  build-and-run:
+    runs-on: [self-hosted, Linux, X64, prod]
+
+    steps:
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+
+      - name: Set up Java 22
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '22'
+
+
+      - name: Build Spring Boot app (Maven)
+        run: mvn -B clean package
+
+
+      - name: Build Docker image
+        run: docker build --pull=false -t transportationmaven:${{ github.ref_name }} .
+
+
+      - name: Stop and remove previous container
+        run: |
+          CONTAINER_NAME="java-docker-ci"
+          
+          CONTAINER_ID=$(docker ps -a -q -f name=${CONTAINER_NAME})
+          
+          if [ -n "$CONTAINER_ID" ]; then
+            echo "Stopping and removing existing container: ${CONTAINER_NAME}"
+            docker stop ${CONTAINER_NAME}
+            docker rm ${CONTAINER_NAME}
+          else
+            echo "No existing container found."
+          fi
+
+
+      - name: Run new container
+        run: |
+          docker run -d --name java-docker-ci -p 9021:8080 transportationmaven:${{ github.ref_name }}
+          echo "Application is running on port 9021 (mapped to container port 8080)"
