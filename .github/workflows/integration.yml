@@ -7,12 +7,20 @@ on:
     branches: [ "dev" ]
 
 jobs:
-  build-and-deploy: # Renamed job for clarity
+  build-and-deploy:
     runs-on: [self-hosted, Linux, X64, dev]
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      # --- NEW STEP TO INSTALL DOCKER COMPOSE ---
+      - name: Install Docker Compose
+        run: |
+          DOCKER_CONFIG=${DOCKER_CONFIG:-$HOME/.docker}
+          mkdir -p $DOCKER_CONFIG/cli-plugins
+          curl -SL https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64 -o $DOCKER_CONFIG/cli-plugins/docker-compose
+          chmod +x $DOCKER_CONFIG/cli-plugins/docker-compose
 
       - name: Set up Java 22
         uses: actions/setup-java@v4
@@ -21,20 +29,16 @@ jobs:
           java-version: '22'
 
       - name: Build Spring Boot app (Maven)
-        run: mvn -B clean package # This step is still essential!
-
-      # --- MODIFIED SECTION START ---
+        run: mvn -B clean package
 
       - name: Stop and remove previous stack (if exists)
-        run: docker compose down # Use 'docker compose' (with a space)
+        run: docker compose down
 
       - name: Build and run new stack
-        run: docker compose up -d --build # Use 'docker compose' (with a space)
-
-      # --- MODIFIED SECTION END ---
+        run: docker compose up -d --build
 
       - name: Clean up old Docker images
-        if: always() # This step will run even if previous steps fail
+        if: always()
         run: |
           echo "Cleaning up dangling Docker images..."
           docker image prune -f
