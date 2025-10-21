@@ -35,7 +35,7 @@ jobs:
 
       - name: Stop and remove previous container
         run: |
-          CONTAINER_NAME="DEV_java-docker-ci"
+          CONTAINER_NAME="dev.java-docker-ci"
           
           CONTAINER_ID=$(docker ps -a -q -f name=${CONTAINER_NAME})
           
