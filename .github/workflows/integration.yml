@@ -50,5 +50,5 @@ jobs:
 
       - name: Run new container
         run: |
-          docker run -d --name dev.java-docker-ci -p 9011:8085 transportationmaven:${{ github.ref_name }}
+          docker run -d --name dev.java-docker-ci -p 9011:8080 transportationmaven:${{ github.ref_name }}
           echo "Application is running on port 9011 (mapped to container port 8080)"
