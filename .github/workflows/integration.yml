@@ -3,14 +3,14 @@ name: Java Docker CI - Ubuntu Runner
 on:
   push:
 
-    branches: [ "master" ]
+    branches: [ "dev" ]
   pull_request:
 
-    branches: [ "master" ]
+    branches: [ "dev" ]
 
 jobs:
   build-and-run:
-    runs-on: [self-hosted, Linux, X64, prod]
+    runs-on: [self-hosted, Linux, X64, dev]
 
     steps:
 
@@ -35,7 +35,7 @@ jobs:
 
       - name: Stop and remove previous container
         run: |
-          CONTAINER_NAME="java-docker-ci"
+          CONTAINER_NAME="DEV_java-docker-ci"
           
           CONTAINER_ID=$(docker ps -a -q -f name=${CONTAINER_NAME})
           
@@ -50,5 +50,5 @@ jobs:
 
       - name: Run new container
         run: |
-          docker run -d --name java-docker-ci -p 9021:8080 transportationmaven:${{ github.ref_name }}
-          echo "Application is running on port 9021 (mapped to container port 8080)"
+          docker run -d --name java-docker-ci -p 9011:8085 transportationmaven:${{ github.ref_name }}
+          echo "Application is running on port 9011 (mapped to container port 8080)"

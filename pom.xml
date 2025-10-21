@@ -12,7 +12,7 @@
 
     <groupId>multitier.trans</groupId>
     <artifactId>TransportationMaven</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>0.0.1-DEV</version>
     <name>transport-mngmt-app</name>
     <description>A Spring Boot application for transportation management</description>
 
