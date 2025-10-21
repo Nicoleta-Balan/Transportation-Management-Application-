@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  # ----------------------------------------------------
+  # 1. POSTGRESQL DATABASE SERVICE
+  # ----------------------------------------------------
+  db:
+    image: postgres:15-alpine
+    container_name: tms_postgres_db
+    environment:
+      # These variables set up the database and default user/password
+      POSTGRES_DB: tms_db
+      POSTGRES_USER: tms_user
+      POSTGRES_PASSWORD: tms_password
+    ports:
+      - "5438:5432" # Expose the application port (Backend REST API)
+    volumes:
+      # Persist the data outside the container so it doesn't disappear when the container stops
+      - postgres_data:/var/lib/postgresql/data
+    restart: always
+
+  # ----------------------------------------------------
+  # 2. SPRING BOOT APPLICATION SERVICE
+  # ----------------------------------------------------
+  app:
+    build: .
+    container_name: tms_backend_app
+    ports:
+      - "8085:8080" # Expose the application port (Backend REST API)
+    depends_on:
+      - db # Ensure the database starts before the application
+    environment:
+      # CRITICAL FIX: The Spring Boot app now connects to the 'db' service name
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/tms_db
+      SPRING_DATASOURCE_USERNAME: tms_user
+      SPRING_DATASOURCE_PASSWORD: tms_password
+    restart: always
+
+volumes:
+  postgres_data:
