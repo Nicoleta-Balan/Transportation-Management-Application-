@@ -26,10 +26,10 @@ jobs:
       # --- MODIFIED SECTION START ---
 
       - name: Stop and remove previous stack (if exists)
-        run: docker-compose down
+        run: docker compose down # Use 'docker compose' (with a space)
 
       - name: Build and run new stack
-        run: docker-compose up -d --build
+        run: docker compose up -d --build # Use 'docker compose' (with a space)
 
       # --- MODIFIED SECTION END ---
 
@@ -38,3 +38,4 @@ jobs:
         run: |
           echo "Cleaning up dangling Docker images..."
           docker image prune -f
+
