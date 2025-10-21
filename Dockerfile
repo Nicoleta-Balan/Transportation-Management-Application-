@@ -1,4 +1,4 @@
-FROM openjdk:22-jre-slim
+FROM openjdk:22-jdk
 
 WORKDIR /app
 
@@ -10,3 +10,4 @@ EXPOSE 8080
 
 # Run the application
 ENTRYPOINT ["java", "-Djava.security.egd=file:/dev/./urandom", "-jar", "/app/app.jar"]
+
