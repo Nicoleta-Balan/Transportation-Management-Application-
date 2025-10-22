@@ -14,7 +14,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # --- NEW STEP TO INSTALL DOCKER COMPOSE ---
+      # --- STEP TO INSTALL DOCKER COMPOSE ---
       - name: Install Docker Compose
         run: |
           DOCKER_CONFIG=${DOCKER_CONFIG:-$HOME/.docker}
@@ -28,13 +28,17 @@ jobs:
           distribution: 'temurin'
           java-version: '22'
 
-      - name: Build Spring Boot app (Maven)
+      # Build the Backend JAR artifact (required before Docker can build the 'app' image)
+      - name: Build Backend Artifact (Spring Boot/Maven)
         run: mvn -B clean package
 
-      - name: Stop and remove previous stack (if exists)
+      - name: Stop and Remove Existing Stack
         run: docker compose down
 
-      - name: Build and run new stack
+      # Build Docker Images for ALL services and Deploy
+      # This single command builds the 'app' (using the root Dockerfile)
+      # and the 'frontend' (using the root Dockerfile and the Node builder)
+      - name: Build Docker Images (Backend & Frontend) and Deploy
         run: docker compose up -d --build
 
       - name: Clean up old Docker images
@@ -42,4 +46,3 @@ jobs:
         run: |
           echo "Cleaning up dangling Docker images..."
           docker image prune -f
-

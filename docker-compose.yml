@@ -1,4 +1,4 @@
-version: '3.8'
+version: '3.9'
 
 services:
   # ----------------------------------------------------
@@ -8,32 +8,49 @@ services:
     image: postgres:15-alpine
     container_name: tms_postgres_db
     environment:
-      # These variables set up the database and default user/password
       POSTGRES_DB: tms_db
       POSTGRES_USER: tms_user
       POSTGRES_PASSWORD: tms_password
     ports:
-      - "5438:5432" # Expose the application port (Backend REST API)
+      - "5438:5432"
     volumes:
-      # Persist the data outside the container so it doesn't disappear when the container stops
       - postgres_data:/var/lib/postgresql/data
     restart: always
 
   # ----------------------------------------------------
-  # 2. SPRING BOOT APPLICATION SERVICE
+  # 2. SPRING BOOT APPLICATION SERVICE (BACKEND API)
   # ----------------------------------------------------
   app:
     build: .
     container_name: tms_backend_app
+    # Host port 8085 mapped to container port 8080
     ports:
-      - "8085:8080" # Expose the application port (Backend REST API)
+      - "8085:8080"
     depends_on:
-      - db # Ensure the database starts before the application
+      - db
     environment:
-      # CRITICAL FIX: The Spring Boot app now connects to the 'db' service name
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/tms_db
       SPRING_DATASOURCE_USERNAME: tms_user
       SPRING_DATASOURCE_PASSWORD: tms_password
+    restart: always
+
+  # ----------------------------------------------------
+  # 3. REACT FRONTEND SERVICE (VITE + NGINX)
+  # ----------------------------------------------------
+  frontend:
+    image: tms_frontend_image
+    build:
+      # The build context is the directory containing the Dockerfile and the Frontend folder.
+      context: .
+      dockerfile: Dockerfile
+    container_name: tms_frontend_app
+    # Map host port 3000 to the container's NGINX port 80
+    ports:
+      - "3000:80"
+    # The frontend is static, so it doesn't strictly depend on the backend to start,
+    # but it will likely fail to load data without it.
+    depends_on:
+      - app
     restart: always
 
 volumes:
