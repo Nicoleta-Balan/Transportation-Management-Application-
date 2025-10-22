@@ -46,7 +46,7 @@ services:
     container_name: tms_frontend_app
     # Map host port 3000 to the container's NGINX port 80
     ports:
-      - "3000:80"
+      - "3000:5173"
     # The frontend is static, so it doesn't strictly depend on the backend to start,
     # but it will likely fail to load data without it.
     depends_on:
