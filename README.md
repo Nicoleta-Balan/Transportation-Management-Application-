@@ -12,13 +12,6 @@ Database: PostgreSQL 15
 Deployment: Docker (Docker Compose)
 CI/CD: GitHub Actions
 
-Technical Stack
-Backend: Java 22 (Spring Boot 3)
-Frontend: React (Vite)
-Database: PostgreSQL 15
-Deployment: Docker (Docker Compose)
-CI/CD: GitHub Actions
-
 
 Objectives
 Improve efficiency in route and booking management
