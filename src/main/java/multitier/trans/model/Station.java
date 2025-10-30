@@ -10,7 +10,6 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 /**
- * Implements SCRUM-14 (Domain Model: Station) and SCRUM-18 (Validation Service for Station).
  * Represents a transport station (e.g., bus station, train station).
  */
 @Entity
