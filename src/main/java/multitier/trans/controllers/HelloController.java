@@ -1,4 +1,4 @@
-package multitier.trans.Controllers;
+package multitier.trans.controllers;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
