@@ -20,12 +20,9 @@ import java.util.List;
 @RequestMapping("/api/routes")
 public class RouteController {
 
-    // MODIFICATION: The controller now depends on the Service layer,
-    // not the repository.
+    //The controller now depends on the Service layer, not the repository.
     @Autowired
     private RouteService routeService;
-
-    // We no longer need the constructor injection for RouteRepository
 
     /**
      * GET endpoint (Read All): Fetches all routes.
@@ -42,6 +39,7 @@ public class RouteController {
      * GET endpoint (Read One): Fetches a single route by its ID.
      * Delegates the call to the service layer.
      */
+
     @GetMapping("/{id}")
     public ResponseEntity<Route> getRouteById(@PathVariable Long id) {
         // The service handles the logic of finding the route
