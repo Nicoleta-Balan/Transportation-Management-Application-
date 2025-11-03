@@ -72,24 +72,34 @@ A Continuous Integration and Continuous Delivery (CI/CD) pipeline using GitHub A
 A frontend application (React) for user interaction.
 
 Setup
-Download Docker Desktop
-Install:
-Maven 
-JDK 22 (please install the version presented in the pom.xml file)
+There are two ways to run the project:
+Method 1: Run with Docker (Recommended)
+This is the simplest and fastest method. It will automatically start the backend and the database together.
+
+Requirements:
+Docker and Docker Compose installed.
 
 Steps:
 Clone the repository
 git clone [https://github.com/NicoletaChihaia/Transportation-Management-Application.git](https://github.com/NicoletaChihaia/Transportation-Management-Application.git)
 cd Transportation-Management-Application
 
+
 Build and start the containers:
-Download Maven in order to run the docker compose command below (docker is necessary, otherwise it won't work)
 docker compose up --build -d
 The backend application will now be running at http://localhost:8085. The database is accessible at localhost:5438.
 
+Method 2: Manual Run (Local Development)
+A. Backend (Spring Boot)
+Open the project in an IDE (e.g., IntelliJ IDEA).
+Ensure you have a PostgreSQL instance running locally and configure src/main/resources/application.properties with your connection details.
+Run the application using your IDE or via Maven:
+mvn spring-boot:run
+
+
 B. Frontend (React)
 Navigate to the frontend directory named FrontEnd:
-cd FrontEnd/vite-project
+cd FrontEnd
 
 Install dependencies:
 npm install
