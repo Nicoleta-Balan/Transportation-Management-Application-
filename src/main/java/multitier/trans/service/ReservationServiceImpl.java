@@ -13,14 +13,13 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Service Implementation ("The Brain") for Reservation logic.
- * Implements the workflows for SCRUM-26 and SCRUM-27.
+ * Service Implementation for Reservation logic.
  */
 @Service
 public class ReservationServiceImpl implements ReservationService {
 
     private final ReservationRepository reservationRepository;
-    private final RouteRepository routeRepository; // We need this to find the Route
+    private final RouteRepository routeRepository;
 
     @Autowired
     public ReservationServiceImpl(ReservationRepository reservationRepository, RouteRepository routeRepository) {
@@ -28,11 +27,12 @@ public class ReservationServiceImpl implements ReservationService {
         this.routeRepository = routeRepository;
     }
 
-    /* Reservation Creation */
-
+    /**
+     * Reservation Creation (MODIFIED)
+     */
     @Override
     public Reservation createReservation(CreateReservationRequest request) {
-        // 1. Find the Route that the user wants to book
+        // 1. Find the Route
         Route route = routeRepository.findById(request.getRouteId())
                 .orElseThrow(() -> new RuntimeException("Route not found with id: " + request.getRouteId()));
 
@@ -48,27 +48,22 @@ public class ReservationServiceImpl implements ReservationService {
         newReservation.setPassengerName(request.getPassengerName());
         newReservation.setSeatCount(request.getSeatCount());
         newReservation.setTripDetails(tripDetails);
-        newReservation.setStatus("CONFIRMED"); // Business logic: New reservations are confirmed
+        newReservation.setStatus("CONFIRMED");
 
-        // 4. Save to database
+
+        // 4. Set the new fare details from the DTO
+        newReservation.setPassengerCategory(request.getPassengerCategory());
+        newReservation.setVehicleClass(request.getVehicleClass());
+
+        // 5. Save to database
         return reservationRepository.save(newReservation);
     }
 
-    /*
-     Reservation Cancellation
-    */
-
     @Override
     public Reservation cancelReservation(Long reservationId) {
-        // 1. Find the existing reservation
         Reservation reservation = reservationRepository.findById(reservationId)
                 .orElseThrow(() -> new RuntimeException("Reservation not found with id: " + reservationId));
-
-        // 2. Apply business logic
-        // We could add logic here: e.g., "if (status == 'COMPLETED') { throw new Exception... }"
         reservation.setStatus("CANCELLED");
-
-        // 3. Save the change
         return reservationRepository.save(reservation);
     }
 
