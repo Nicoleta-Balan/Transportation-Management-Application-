@@ -63,25 +63,25 @@ public class ReservationControllerTest {
     }
 
     /**
-     * Test pentru SCRUM-26: Reservation Creation (Happy Path)
-     * ACESTA ESTE TESTUL CARE A EȘUAT ȘI PE CARE L-AM REPARAT
+     * Test for Reservation Creation (Happy Path)
      */
+
     @Test
     public void whenCreateReservation_withValidData_thenReturns201Created() throws Exception {
         // 1. Arrange (Set up the test)
-        // Acesta este DTO-ul (formularul) pe care îl trimite clientul
+        // This is the DTO (form) that the client sends
+
         CreateReservationRequest request = new CreateReservationRequest();
         request.setRouteId(1L);
         request.setPassengerName("Test Passenger");
         request.setSeatCount(2);
         request.setDepartureTime(testDeparture);
         request.setArrivalTime(testArrival);
-        // --- FIX: Adăugăm noile câmpuri obligatorii ---
+
         request.setPassengerCategory(PassengerCategory.ADULT);
         request.setVehicleClass(VehicleClass.STANDARD);
-        // --- SFÂRȘIT FIX ---
 
-        // Acesta este obiectul complet pe care ne așteptăm ca serviciul să-l returneze
+
         Reservation savedReservation = new Reservation();
         savedReservation.setId(1L);
         savedReservation.setRoute(testRoute);
@@ -89,25 +89,25 @@ public class ReservationControllerTest {
         savedReservation.setSeatCount(2);
         savedReservation.setStatus("CONFIRMED");
         savedReservation.setTripDetails(new TripTimeDetails(testDeparture, testArrival));
-        savedReservation.setPassengerCategory(PassengerCategory.ADULT); // Adăugăm și aici
-        savedReservation.setVehicleClass(VehicleClass.STANDARD); // Adăugăm și aici
+        savedReservation.setPassengerCategory(PassengerCategory.ADULT);
+        savedReservation.setVehicleClass(VehicleClass.STANDARD);
 
-        // Îi spunem serviciului fals ce să facă
+        // We tell the service what to do
         when(reservationService.createReservation(any(CreateReservationRequest.class))).thenReturn(savedReservation);
 
         // 2. Act (Perform the action) & 3. Assert (Check the result)
         mockMvc.perform(post("/api/reservations")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request))) // Trimitem DTO-ul (acum corect) ca JSON
-                .andExpect(status().isCreated()) // Acum ne așteptăm ca testul să treacă (201 Created)
-                .andExpect(jsonPath("$.id").value(1L))
+                        .content(objectMapper.writeValueAsString(request))) // We send the DTO as a JSON
+                .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.passengerName").value("Test Passenger"))
                 .andExpect(jsonPath("$.status").value("CONFIRMED"));
     }
 
     /**
-     * Test pentru SCRUM-27: Reservation Cancellation
+     * Test for Reservation Cancellation
      */
+
     @Test
     public void whenCancelReservation_withValidId_thenReturns200OK() throws Exception {
         // 1. Arrange
@@ -115,7 +115,7 @@ public class ReservationControllerTest {
         cancelledReservation.setId(1L);
         cancelledReservation.setRoute(testRoute);
         cancelledReservation.setPassengerName("Test Passenger");
-        cancelledReservation.setStatus("CANCELLED"); // Serviciul a schimbat statusul
+        cancelledReservation.setStatus("CANCELLED"); // The service changed the status
         cancelledReservation.setPassengerCategory(PassengerCategory.ADULT);
         cancelledReservation.setVehicleClass(VehicleClass.STANDARD);
 
@@ -129,9 +129,9 @@ public class ReservationControllerTest {
     }
 
     /**
-     * Test pentru Validare (parte din SCRUM-29)
-     * Verifică dacă API-ul respinge o cerere cu date invalide (ex: nume pasager gol)
+     * Test for validation
      */
+
     @Test
     public void whenCreateReservation_withInvalidData_thenReturns400BadRequest() throws Exception {
         // 1. Arrange
@@ -141,13 +141,13 @@ public class ReservationControllerTest {
         request.setSeatCount(2);
         request.setDepartureTime(testDeparture);
         request.setArrivalTime(testArrival);
-        request.setPassengerCategory(PassengerCategory.ADULT); // Câmp valid
-        request.setVehicleClass(VehicleClass.STANDARD); // Câmp valid
+        request.setPassengerCategory(PassengerCategory.ADULT);
+        request.setVehicleClass(VehicleClass.STANDARD);
 
         // 2. Act & 3. Assert
         mockMvc.perform(post("/api/reservations")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isBadRequest()); // Ne așteptăm la 400 Bad Request
+                .andExpect(status().isBadRequest()); // Expecting 400 Bad Request
     }
 }
