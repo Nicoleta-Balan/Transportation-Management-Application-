@@ -3,17 +3,18 @@ package multitier.trans.dto;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import multitier.trans.model.enums.PassengerCategory;
+import multitier.trans.model.enums.VehicleClass;
 import java.time.LocalDateTime;
 
 /**
- * DTO (Data Transfer Object) for handling a new reservation request.
- * This is the "form" the client (React) will fill out.
+ * DTO for handling a new reservation request.
+ * MODIFIED to include fare details needed for SCRUM-34.
  */
-
 public class CreateReservationRequest {
 
     @NotNull(message = "Route ID cannot be null")
-    private Long routeId; // The ID of the route to book
+    private Long routeId;
 
     @NotBlank(message = "Passenger name cannot be blank")
     private String passengerName;
@@ -27,7 +28,14 @@ public class CreateReservationRequest {
     @NotNull(message = "Arrival time cannot be null")
     private LocalDateTime arrivalTime;
 
-    // --- Getters and Setters ---
+    @NotNull(message = "Passenger category must be specified")
+    private PassengerCategory passengerCategory;
+
+    @NotNull(message = "Vehicle class must be specified")
+    private VehicleClass vehicleClass;
+
+    // --- START: Getters and Setters (FIX) ---
+    // These methods were missing, causing the build failure.
 
     public Long getRouteId() {
         return routeId;
@@ -68,4 +76,21 @@ public class CreateReservationRequest {
     public void setArrivalTime(LocalDateTime arrivalTime) {
         this.arrivalTime = arrivalTime;
     }
+
+    public PassengerCategory getPassengerCategory() {
+        return passengerCategory;
+    }
+
+    public void setPassengerCategory(PassengerCategory passengerCategory) {
+        this.passengerCategory = passengerCategory;
+    }
+
+    public VehicleClass getVehicleClass() {
+        return vehicleClass;
+    }
+
+    public void setVehicleClass(VehicleClass vehicleClass) {
+        this.vehicleClass = vehicleClass;
+    }
+    // --- END: Getters and Setters (FIX) ---
 }

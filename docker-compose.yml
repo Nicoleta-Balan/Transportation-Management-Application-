@@ -10,7 +10,7 @@ services:
     environment:
       POSTGRES_DB: tms_db
       POSTGRES_USER: tms_user
-      POSTGRES_PASSWORD: tms_password
+      POSTGRES_PASSWORD: gi
     ports:
       - "5438:5432"
     volumes:

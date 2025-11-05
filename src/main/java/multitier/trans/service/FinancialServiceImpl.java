@@ -1,0 +1,61 @@
+package multitier.trans.service;
+
+import multitier.trans.model.FarePolicy;
+import multitier.trans.model.Reservation;
+import multitier.trans.repository.FarePolicyRepository;
+import multitier.trans.repository.ReservationRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.Optional;
+
+/**
+ * Service Implementation ("The Brain") for financial logic.
+ * Implements the workflow for SCRUM-34 (Computation Service).
+ * THIS VERSION IS FIXED.
+ */
+@Service
+public class FinancialServiceImpl implements FinancialService {
+
+    private final ReservationRepository reservationRepository;
+    private final FarePolicyRepository farePolicyRepository;
+
+    @Autowired
+    public FinancialServiceImpl(ReservationRepository reservationRepository, FarePolicyRepository farePolicyRepository) {
+        this.reservationRepository = reservationRepository;
+        this.farePolicyRepository = farePolicyRepository;
+    }
+
+    /**
+     * This is the "Computation Service" logic for SCRUM-34.
+     * This version is fixed to use the correct getters from Reservation.
+     */
+    @Override
+    public double calculateTotalRevenue() {
+        List<Reservation> allReservations = reservationRepository.findAll();
+        double totalRevenue = 0.0;
+
+        for (Reservation res : allReservations) {
+
+            // FIX: Call the correct method res.getStatus()
+            if ("CONFIRMED".equalsIgnoreCase(res.getStatus())) {
+
+                // FIX: Call the correct getters from the 'res' object
+                Optional<FarePolicy> policy = farePolicyRepository.findByRouteIdAndPassengerCategoryAndVehicleClass(
+                        res.getRoute().getId(),
+                        res.getPassengerCategory(), // <-- FIXED
+                        res.getVehicleClass()     // <-- FIXED
+                );
+
+                if (policy.isPresent()) {
+                    // FIX: Call the correct method res.getSeatCount()
+                    totalRevenue += (policy.get().getPrice() * res.getSeatCount());
+                } else {
+                    System.err.println("No fare policy found for reservation ID: " + res.getId());
+                }
+            }
+        }
+        return totalRevenue;
+    }
+}

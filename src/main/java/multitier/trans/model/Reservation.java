@@ -4,12 +4,13 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import multitier.trans.model.enums.PassengerCategory;
+import multitier.trans.model.enums.VehicleClass;
 
 /**
- *
- * This is the main @Entity for a reservation. It will create a 'reservations' table.
+ * Implements SCRUM-33 (Domain Model Implementation: Reservation & Booking).
+ * MODIFIED to include fare details needed for SCRUM-34.
  */
-
 @Entity
 @Table(name = "reservations")
 public class Reservation {
@@ -17,11 +18,6 @@ public class Reservation {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
-    /**
-     * This links the Reservation to a specific Route.
-     * Many Reservations can be made for one Route.
-     */
 
     @NotNull(message = "Route cannot be null")
     @ManyToOne
@@ -37,28 +33,63 @@ public class Reservation {
     @NotBlank(message = "Reservation status cannot be blank")
     private String status; // e.g., "CONFIRMED", "CANCELLED", "PENDING"
 
-    /**
-     * This uses an @Embedded Value Object
-     * The fields (departureTime, arrivalTime) from TripTimeDetails
-     * will be added directly to the 'reservations' table.
-     */
-
     @Embedded
     private TripTimeDetails tripDetails;
 
-    // --- Constructors ---
+
+
+    /**
+     * Stores the passenger category for this specific reservation (e.g., ADULT).
+     * This is required to find the price that was paid.
+     */
+    @NotNull(message = "Passenger category cannot be null")
+    @Enumerated(EnumType.STRING)
+    @Column(name = "passenger_category", nullable = false)
+    private PassengerCategory passengerCategory;
+
+    /**
+     * Stores the vehicle class for this specific reservation (e.g., STANDARD).
+     * This is required to find the price that was paid.
+     */
+    @NotNull(message = "Vehicle class cannot be null")
+    @Enumerated(EnumType.STRING)
+    @Column(name = "vehicle_class", nullable = false)
+    private VehicleClass vehicleClass;
+
+
+
 
     public Reservation() {
     }
 
-    // --- Getters and Setters ---
 
     public Long getId() {
         return id;
     }
+    // ... other getters/setters ...
+    public TripTimeDetails getTripDetails() {
+        return tripDetails;
+    }
 
-    public void setId(Long id) {
-        this.id = id;
+    public void setTripDetails(TripTimeDetails tripDetails) {
+        this.tripDetails = tripDetails;
+    }
+
+    // --- GETTERS/SETTERS ---
+    public PassengerCategory getPassengerCategory() {
+        return passengerCategory;
+    }
+
+    public void setPassengerCategory(PassengerCategory passengerCategory) {
+        this.passengerCategory = passengerCategory;
+    }
+
+    public VehicleClass getVehicleClass() {
+        return vehicleClass;
+    }
+
+    public void setVehicleClass(VehicleClass vehicleClass) {
+        this.vehicleClass = vehicleClass;
     }
 
     public Route getRoute() {
@@ -67,6 +98,10 @@ public class Reservation {
 
     public void setRoute(Route route) {
         this.route = route;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
     }
 
     public String getPassengerName() {
@@ -91,13 +126,5 @@ public class Reservation {
 
     public void setStatus(String status) {
         this.status = status;
-    }
-
-    public TripTimeDetails getTripDetails() {
-        return tripDetails;
-    }
-
-    public void setTripDetails(TripTimeDetails tripDetails) {
-        this.tripDetails = tripDetails;
     }
 }
