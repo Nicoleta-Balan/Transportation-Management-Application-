@@ -1,12 +1,13 @@
 package multitier.trans.controllers;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import multitier.trans.dto.CreateReservationRequest;
-import multitier.trans.model.Reservation;
-import multitier.trans.model.Route;
-import multitier.trans.model.Station;
-import multitier.trans.model.TripTimeDetails;
-import multitier.trans.service.ReservationService;
+import multitier.trans.application.dto.CreateReservationRequest;
+import multitier.trans.domain.model.Reservation;
+import multitier.trans.domain.model.Route;
+import multitier.trans.domain.model.Station;
+import multitier.trans.domain.model.TripTimeDetails;
+import multitier.trans.application.service.ReservationService;
+import multitier.trans.interfaces.ReservationController;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

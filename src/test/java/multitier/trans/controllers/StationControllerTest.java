@@ -1,8 +1,9 @@
 package multitier.trans.controllers;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import multitier.trans.model.Station;
-import multitier.trans.service.StationService;
+import multitier.trans.domain.model.Station;
+import multitier.trans.application.service.StationService;
+import multitier.trans.interfaces.StationController;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
