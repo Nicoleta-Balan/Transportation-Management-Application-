@@ -87,6 +87,14 @@ Download Maven in order to run the docker compose command below (docker is neces
 docker compose up --build -d
 The backend application will now be running at http://localhost:8085. The database is accessible at localhost:5438.
 
+**Note**: The database schema is automatically initialized when the PostgreSQL container starts for the first time. The SQL scripts in the `database/` directory are executed automatically. See `database/INTEGRATION_GUIDE.md` for more details.
+
+To load the sample data:
+
+docker cp database/04_sample_data.sql tms_postgres_db:/tmp/04_sample_data.sql
+
+docker compose exec db psql -U tms_user -d tms_db -f /tmp/04_sample_data.sql
+
 B. Frontend (React)
 Navigate to the frontend directory named FrontEnd:
 cd FrontEnd/vite-project
@@ -104,4 +112,49 @@ Routes (/api/routes)
 
 GET /: Returns a list of all routes.
 POST /: Creates a new route.
-Body: { "originCity": "String", "destinationCity": "String", "vehicleCapacity": "Integer" }
+Body: { "originStationId": Long, "destinationStationId": Long, "vehicleCapacity": Integer }
+
+Reservations (/api/reservations)
+
+POST /: Creates a reservation with passenger contact details and category/class for pricing.
+Body: {
+  "routeId": Long,
+  "passengerName": "String",
+  "passengerEmail": "String",
+  "passengerPhone": "String",
+  "seatCount": Integer,
+  "departureTime": "ISO timestamp",
+  "arrivalTime": "ISO timestamp",
+  "passengerCategory": "ADULT|CHILD|SENIOR|STUDENT",
+  "vehicleClass": "STANDARD|COACH|MINI_BUS|DOUBLE_DECKER"
+}
+GET /: Returns all reservations including denormalized fare information (baseFare, vatAmount, totalFare).
+PUT /{id}/cancel: Cancels a reservation and frees seats.
+
+Route Timetables (/api/routes/{routeId}/timetables)
+
+POST /: Creates a timetable for the route with optional entries.
+GET /: Lists all timetables for the route.
+POST /{timetableId}/entries: Adds one or more entries (day of week, departure/arrival times) to a timetable.
+
+Analytics (/api/analytics)
+
+GET /routes/{routeId}/availability: Returns current seat availability for the route.
+GET /routes/{routeId}/statistics: Returns aggregated reservation and revenue statistics for the route.
+GET /revenue?date=YYYY-MM-DD&endDate=YYYY-MM-DD&routeId=...&passengerCategory=...&vehicleClass=...:
+    Returns revenue summaries filtered by date range, route, passenger category, and vehicle class.
+
+## Database Integration
+
+The application uses a comprehensive PostgreSQL database schema with:
+- **Core Tables**: Stations, Routes, Fare Policies, Reservations
+- **Timetables**: Route timetables and timetable entries for recurring schedules
+- **Denormalized Tables**: Route Availability, Route Statistics, Revenue Summary
+- **Temporality Support**: VAT rates and fare policies with historical tracking
+- **Triggers**: Automatic validation and denormalization
+- **Functions and Procedures**: Business logic in the database
+
+For detailed database documentation, see:
+- [Database README](database/README.md)
+- [Database Integration Guide](database/INTEGRATION_GUIDE.md)
+- [Database Quick Start](database/QUICK_START.md)

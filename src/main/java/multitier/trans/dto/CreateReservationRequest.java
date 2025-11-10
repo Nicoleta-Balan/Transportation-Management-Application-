@@ -1,8 +1,10 @@
 package multitier.trans.dto;
 
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import multitier.trans.model.enums.PassengerCategory;
 import multitier.trans.model.enums.VehicleClass;
 import java.time.LocalDateTime;
@@ -18,6 +20,12 @@ public class CreateReservationRequest {
 
     @NotBlank(message = "Passenger name cannot be blank")
     private String passengerName;
+
+    @Email(message = "Passenger email must be valid")
+    private String passengerEmail;
+
+    @Size(max = 20, message = "Passenger phone number must be at most 20 characters")
+    private String passengerPhone;
 
     @Min(value = 1, message = "Must book at least 1 seat")
     private int seatCount;
@@ -51,6 +59,22 @@ public class CreateReservationRequest {
 
     public void setPassengerName(String passengerName) {
         this.passengerName = passengerName;
+    }
+
+    public String getPassengerEmail() {
+        return passengerEmail;
+    }
+
+    public void setPassengerEmail(String passengerEmail) {
+        this.passengerEmail = passengerEmail;
+    }
+
+    public String getPassengerPhone() {
+        return passengerPhone;
+    }
+
+    public void setPassengerPhone(String passengerPhone) {
+        this.passengerPhone = passengerPhone;
     }
 
     public int getSeatCount() {

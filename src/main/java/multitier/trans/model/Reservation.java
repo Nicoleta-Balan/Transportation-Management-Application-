@@ -6,6 +6,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import multitier.trans.model.enums.PassengerCategory;
 import multitier.trans.model.enums.VehicleClass;
+import java.math.BigDecimal;
 
 /**
  * Implements SCRUM-33 (Domain Model Implementation: Reservation & Booking).
@@ -25,16 +26,46 @@ public class Reservation {
     private Route route;
 
     @NotBlank(message = "Passenger name cannot be blank")
+    @Column(name = "passenger_name", nullable = false)
     private String passengerName;
 
+    @Column(name = "passenger_email")
+    private String passengerEmail;
+
+    @Column(name = "passenger_phone")
+    private String passengerPhone;
+
     @Min(value = 1, message = "Must book at least 1 seat")
+    @Column(name = "seat_count", nullable = false)
     private int seatCount;
 
     @NotBlank(message = "Reservation status cannot be blank")
+    @Column(nullable = false)
     private String status; // e.g., "CONFIRMED", "CANCELLED", "PENDING"
 
+    // Trip time details (embedded)
     @Embedded
+    @AttributeOverrides({
+        @AttributeOverride(name = "departureTime", column = @Column(name = "departure_time", nullable = false)),
+        @AttributeOverride(name = "arrivalTime", column = @Column(name = "arrival_time", nullable = false))
+    })
     private TripTimeDetails tripDetails;
+
+    // Denormalized fields (populated by database triggers)
+    @Column(name = "origin_station_name", insertable = false, updatable = false)
+    private String originStationName;
+
+    @Column(name = "destination_station_name", insertable = false, updatable = false)
+    private String destinationStationName;
+
+    @Column(name = "base_fare", insertable = false, updatable = false)
+    private BigDecimal baseFare;
+
+    @Column(name = "vat_amount", insertable = false, updatable = false)
+    private BigDecimal vatAmount;
+
+    @Column(name = "total_fare", insertable = false, updatable = false)
+    private BigDecimal totalFare;
 
 
 
@@ -126,5 +157,61 @@ public class Reservation {
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public String getPassengerEmail() {
+        return passengerEmail;
+    }
+
+    public void setPassengerEmail(String passengerEmail) {
+        this.passengerEmail = passengerEmail;
+    }
+
+    public String getPassengerPhone() {
+        return passengerPhone;
+    }
+
+    public void setPassengerPhone(String passengerPhone) {
+        this.passengerPhone = passengerPhone;
+    }
+
+    public String getOriginStationName() {
+        return originStationName;
+    }
+
+    public void setOriginStationName(String originStationName) {
+        this.originStationName = originStationName;
+    }
+
+    public String getDestinationStationName() {
+        return destinationStationName;
+    }
+
+    public void setDestinationStationName(String destinationStationName) {
+        this.destinationStationName = destinationStationName;
+    }
+
+    public BigDecimal getBaseFare() {
+        return baseFare;
+    }
+
+    public void setBaseFare(BigDecimal baseFare) {
+        this.baseFare = baseFare;
+    }
+
+    public BigDecimal getVatAmount() {
+        return vatAmount;
+    }
+
+    public void setVatAmount(BigDecimal vatAmount) {
+        this.vatAmount = vatAmount;
+    }
+
+    public BigDecimal getTotalFare() {
+        return totalFare;
+    }
+
+    public void setTotalFare(BigDecimal totalFare) {
+        this.totalFare = totalFare;
     }
 }

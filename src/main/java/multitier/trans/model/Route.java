@@ -27,7 +27,7 @@ public class Route {
     @JoinColumn(name = "destination_station_id", nullable = false) // The column name in the DB
     private Station destinationStation;
 
-    @Column(nullable = false) // Added a constraint
+    @Column(name = "vehicle_capacity", nullable = false)
     private int vehicleCapacity;
 
     // --- Constructors ---

@@ -46,6 +46,8 @@ public class ReservationServiceImpl implements ReservationService {
         Reservation newReservation = new Reservation();
         newReservation.setRoute(route);
         newReservation.setPassengerName(request.getPassengerName());
+        newReservation.setPassengerEmail(request.getPassengerEmail());
+        newReservation.setPassengerPhone(request.getPassengerPhone());
         newReservation.setSeatCount(request.getSeatCount());
         newReservation.setTripDetails(tripDetails);
         newReservation.setStatus("CONFIRMED");
@@ -56,7 +58,11 @@ public class ReservationServiceImpl implements ReservationService {
         newReservation.setVehicleClass(request.getVehicleClass());
 
         // 5. Save to database
-        return reservationRepository.save(newReservation);
+        Reservation saved = reservationRepository.save(newReservation);
+
+        // Refresh to include denormalized fields populated by database triggers
+        return reservationRepository.findById(saved.getId())
+                .orElseThrow(() -> new RuntimeException("Reservation not found after creation: " + saved.getId()));
     }
 
     @Override

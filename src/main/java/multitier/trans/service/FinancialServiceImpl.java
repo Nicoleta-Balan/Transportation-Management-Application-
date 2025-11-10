@@ -7,6 +7,7 @@ import multitier.trans.repository.ReservationRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
@@ -34,7 +35,7 @@ public class FinancialServiceImpl implements FinancialService {
     @Override
     public double calculateTotalRevenue() {
         List<Reservation> allReservations = reservationRepository.findAll();
-        double totalRevenue = 0.0;
+        BigDecimal totalRevenue = BigDecimal.ZERO;
 
         for (Reservation res : allReservations) {
 
@@ -50,12 +51,14 @@ public class FinancialServiceImpl implements FinancialService {
 
                 if (policy.isPresent()) {
                     // FIX: Call the correct method res.getSeatCount()
-                    totalRevenue += (policy.get().getPrice() * res.getSeatCount());
+                    BigDecimal seatCount = BigDecimal.valueOf(res.getSeatCount());
+                    BigDecimal reservationRevenue = policy.get().getPrice().multiply(seatCount);
+                    totalRevenue = totalRevenue.add(reservationRevenue);
                 } else {
                     System.err.println("No fare policy found for reservation ID: " + res.getId());
                 }
             }
         }
-        return totalRevenue;
+        return totalRevenue.doubleValue();
     }
 }

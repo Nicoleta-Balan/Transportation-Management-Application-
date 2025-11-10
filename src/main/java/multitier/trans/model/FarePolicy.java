@@ -1,10 +1,11 @@
 package multitier.trans.model;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
 import multitier.trans.model.enums.PassengerCategory;
 import multitier.trans.model.enums.VehicleClass;
+import java.math.BigDecimal;
 
 /**
  * Domain Model: Fare Policy & Cost.
@@ -39,9 +40,9 @@ public class FarePolicy {
 
     // The cost (price) defined by this policy
     @NotNull
-    @Min(value = 0, message = "Price cannot be negative")
-    @Column(nullable = false)
-    private Double price;
+    @DecimalMin(value = "0.00", inclusive = true, message = "Price cannot be negative")
+    @Column(name = "base_price", nullable = false)
+    private BigDecimal price;
 
     // --- Constructors ---
 
@@ -82,11 +83,11 @@ public class FarePolicy {
         this.vehicleClass = vehicleClass;
     }
 
-    public Double getPrice() {
+    public BigDecimal getPrice() {
         return price;
     }
 
-    public void setPrice(Double price) {
+    public void setPrice(BigDecimal price) {
         this.price = price;
     }
 }
