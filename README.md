@@ -12,6 +12,8 @@ Database: PostgreSQL 15
 Deployment: Docker (Docker Compose)
 CI/CD: GitHub Actions
 
+Use Case Diagram, UML Diagram, SQL Diagram, C4 Diagram
+https://www.canva.com/design/DAG18YdZCG8/tD2iVf8larL_9PZJ8JawyA/edit?utm_content=DAG18YdZCG8&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton
 
 Objectives
 Improve efficiency in route and booking management
@@ -75,6 +77,8 @@ Setup
 Download Docker Desktop
 Install:
 Maven 
+Node
+Npm
 JDK 22 (please install the version presented in the pom.xml file)
 
 Steps:
@@ -98,10 +102,3 @@ Start the development server:
 npm run dev
 
 The frontend application will be accessible at http://localhost:5173.
-
-API Endpoints (Work in Progress)
-Routes (/api/routes)
-
-GET /: Returns a list of all routes.
-POST /: Creates a new route.
-Body: { "originCity": "String", "destinationCity": "String", "vehicleCapacity": "Integer" }

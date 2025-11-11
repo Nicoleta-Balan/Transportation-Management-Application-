@@ -12,6 +12,7 @@ import jakarta.validation.constraints.Size;
 /**
  * Represents a transport station (e.g., bus station, train station).
  */
+
 @Entity
 @Table(name = "stations")
 public class Station {

@@ -8,9 +8,10 @@ import multitier.trans.model.enums.PassengerCategory;
 import multitier.trans.model.enums.VehicleClass;
 
 /**
- * Implements SCRUM-33 (Domain Model Implementation: Reservation & Booking).
- * MODIFIED to include fare details needed for SCRUM-34.
+ * Implements Domain Model Implementation: Reservation & Booking
+ * Includes fare details
  */
+
 @Entity
 @Table(name = "reservations")
 public class Reservation {
@@ -36,12 +37,11 @@ public class Reservation {
     @Embedded
     private TripTimeDetails tripDetails;
 
-
-
     /**
      * Stores the passenger category for this specific reservation (e.g., ADULT).
      * This is required to find the price that was paid.
      */
+
     @NotNull(message = "Passenger category cannot be null")
     @Enumerated(EnumType.STRING)
     @Column(name = "passenger_category", nullable = false)
@@ -51,21 +51,20 @@ public class Reservation {
      * Stores the vehicle class for this specific reservation (e.g., STANDARD).
      * This is required to find the price that was paid.
      */
+
     @NotNull(message = "Vehicle class cannot be null")
     @Enumerated(EnumType.STRING)
     @Column(name = "vehicle_class", nullable = false)
     private VehicleClass vehicleClass;
 
 
-
-
     public Reservation() {
     }
-
 
     public Long getId() {
         return id;
     }
+
     // ... other getters/setters ...
     public TripTimeDetails getTripDetails() {
         return tripDetails;

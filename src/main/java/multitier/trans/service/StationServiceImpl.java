@@ -25,12 +25,9 @@ public class StationServiceImpl implements StationService {
      * Saves the station. The validation (@Size, @NotNull)
      * will be triggered automatically by @Valid in the controller.
      */
+
     @Override
     public Station createStation(Station station) {
-        // You can add more complex logic here, e.g.,
-        // if (stationRepository.findByName(station.getName()) != null) {
-        //     throw new RuntimeException("Station with this name already exists!");
-        // }
         return stationRepository.save(station);
     }
 
