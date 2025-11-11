@@ -261,7 +261,7 @@ BEGIN
         FROM calculate_fare_with_vat(
             v_base_price,
             NEW.seat_count,
-            get_vat_rate_for_date(COALESCE(NEW.departure_time, CURRENT_TIMESTAMP))
+            get_vat_rate_for_date(COALESCE(NEW.departure_time, CURRENT_TIMESTAMP)::timestamp)
         );
         
         -- Update denormalized fields

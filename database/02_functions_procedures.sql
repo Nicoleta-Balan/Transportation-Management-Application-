@@ -457,7 +457,7 @@ BEGIN
     END IF;
     
     IF v_current_status = 'COMPLETED' THEN
-        RAISE EXCEPTION 'Cannot cancel a completed reservation', p_reservation_id;
+        RAISE EXCEPTION 'Cannot cancel a completed reservation (id=%)', p_reservation_id;
     END IF;
     
     -- Update reservation status
@@ -505,7 +505,7 @@ BEGIN
     END IF;
     
     IF v_current_status = 'CANCELLED' THEN
-        RAISE EXCEPTION 'Cannot confirm a cancelled reservation', p_reservation_id;
+        RAISE EXCEPTION 'Cannot confirm a cancelled reservation (id=%)', p_reservation_id;
     END IF;
     
     -- Update reservation status
