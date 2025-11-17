@@ -1,6 +1,7 @@
 package multitier.trans.service;
 
 import multitier.trans.dto.CreateReservationRequest;
+import multitier.trans.dto.FareCalculationResponse;
 import multitier.trans.model.Reservation;
 
 import java.util.List;
@@ -26,4 +27,10 @@ public interface ReservationService {
      */
 
     Optional<Reservation> getReservationById(Long id);
+
+    /**
+     * Calculates the fare for a reservation before saving.
+     * Used to display fare breakdown in the UI.
+     */
+    FareCalculationResponse calculateFare(Long routeId, String passengerCategory, Integer seatCount, java.time.LocalDateTime departureTime);
 }

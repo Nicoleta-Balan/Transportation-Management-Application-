@@ -2,13 +2,16 @@ package multitier.trans.controllers;
 
 import jakarta.validation.Valid;
 import multitier.trans.dto.CreateReservationRequest;
+import multitier.trans.dto.FareCalculationResponse;
 import multitier.trans.model.Reservation;
 import multitier.trans.service.ReservationService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -68,5 +71,33 @@ public class ReservationController {
         return reservationService.getReservationById(id)
                 .map(ResponseEntity::ok) // 200 OK if found
                 .orElse(ResponseEntity.notFound().build()); // 404 Not Found if not
+    }
+
+    /**
+     * GET /api/reservations/calculate-fare
+     * Calculates the fare for a reservation before saving.
+     * Used to display fare breakdown in the UI.
+     * 
+     * Query parameters:
+     * - routeId: The route ID
+     * - passengerCategory: ADULT, CHILD, SENIOR, STUDENT
+     * - seatCount: Number of seats (1-10)
+     * - departureTime: Departure date/time (ISO format: 2024-01-15T10:00:00)
+     */
+    @GetMapping("/calculate-fare")
+    public ResponseEntity<FareCalculationResponse> calculateFare(
+            @RequestParam Long routeId,
+            @RequestParam String passengerCategory,
+            @RequestParam Integer seatCount,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime departureTime) {
+        
+        FareCalculationResponse fare = reservationService.calculateFare(
+                routeId,
+                passengerCategory,
+                seatCount,
+                departureTime
+        );
+        
+        return ResponseEntity.ok(fare);
     }
 }

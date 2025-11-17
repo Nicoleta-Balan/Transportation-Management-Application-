@@ -1,6 +1,7 @@
 package multitier.trans.service;
 
 import multitier.trans.dto.CreateReservationRequest;
+import multitier.trans.dto.FareCalculationResponse;
 import multitier.trans.model.Reservation;
 import multitier.trans.model.Route;
 import multitier.trans.model.TripTimeDetails;
@@ -9,7 +10,10 @@ import multitier.trans.repository.RouteRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -81,5 +85,41 @@ public class ReservationServiceImpl implements ReservationService {
     @Override
     public Optional<Reservation> getReservationById(Long id) {
         return reservationRepository.findById(id);
+    }
+
+    @Override
+    public FareCalculationResponse calculateFare(Long routeId, String passengerCategory, Integer seatCount, LocalDateTime departureTime) {
+        // Call the database function
+        Map<String, Object> result = reservationRepository.calculateFare(
+                routeId.intValue(),
+                passengerCategory,
+                seatCount,
+                departureTime
+        );
+        
+        // Extract values from the result map
+        // PostgreSQL returns DECIMAL as BigDecimal, but we need to handle it safely
+        Object baseFareObj = result.get("base_fare");
+        Object vatAmountObj = result.get("vat_amount");
+        Object totalFareObj = result.get("total_fare");
+        Object vatRateObj = result.get("vat_rate");
+        
+        BigDecimal baseFare = baseFareObj instanceof BigDecimal 
+                ? (BigDecimal) baseFareObj 
+                : BigDecimal.valueOf(((Number) baseFareObj).doubleValue());
+        
+        BigDecimal vatAmount = vatAmountObj instanceof BigDecimal
+                ? (BigDecimal) vatAmountObj
+                : BigDecimal.valueOf(((Number) vatAmountObj).doubleValue());
+        
+        BigDecimal totalFare = totalFareObj instanceof BigDecimal
+                ? (BigDecimal) totalFareObj
+                : BigDecimal.valueOf(((Number) totalFareObj).doubleValue());
+        
+        BigDecimal vatRate = vatRateObj instanceof BigDecimal
+                ? (BigDecimal) vatRateObj
+                : BigDecimal.valueOf(((Number) vatRateObj).doubleValue());
+        
+        return new FareCalculationResponse(baseFare, vatAmount, totalFare, vatRate);
     }
 }
