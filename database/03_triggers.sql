@@ -282,21 +282,28 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Function to update route availability after reservation changes
+-- Uses calculate_booked_seats() to correctly handle time-based overlap
 CREATE OR REPLACE FUNCTION update_route_availability_trigger()
 RETURNS TRIGGER AS $$
 DECLARE
     v_route_id BIGINT;
+    v_departure_time TIMESTAMP;
+    v_arrival_time TIMESTAMP;
 BEGIN
-    -- Determine which route to update
+    -- Determine which route and times to update
     IF TG_OP = 'DELETE' THEN
         v_route_id := OLD.route_id;
+        v_departure_time := OLD.departure_time;
+        v_arrival_time := OLD.arrival_time;
     ELSE
         v_route_id := NEW.route_id;
+        v_departure_time := NEW.departure_time;
+        v_arrival_time := NEW.arrival_time;
     END IF;
     
-    -- Update route availability asynchronously (using a scheduled job would be better)
-    -- For now, we'll update it directly
-    CALL update_route_availability(v_route_id);
+    -- Update route availability for this specific departure time
+    -- This uses calculate_booked_seats() which handles time overlap correctly
+    CALL update_route_availability(v_route_id, v_departure_time, v_arrival_time);
     
     -- Update route statistics
     CALL update_route_statistics(v_route_id);
@@ -459,13 +466,27 @@ $$ LANGUAGE plpgsql;
 -- Function to update route statistics when route changes
 CREATE OR REPLACE FUNCTION update_route_on_change()
 RETURNS TRIGGER AS $$
+DECLARE
+    reservation_record RECORD;
 BEGIN
     -- Update updated_at timestamp
     NEW.updated_at := CURRENT_TIMESTAMP;
     
-    -- If capacity changed, update availability
+    -- If capacity changed, update availability for all departure times on this route
     IF TG_OP = 'UPDATE' AND OLD.vehicle_capacity != NEW.vehicle_capacity THEN
-        CALL update_route_availability(NEW.id);
+        -- Update availability for each unique departure time
+        FOR reservation_record IN 
+            SELECT DISTINCT departure_time, arrival_time
+            FROM reservations
+            WHERE route_id = NEW.id
+              AND status IN ('PENDING', 'CONFIRMED')
+        LOOP
+            CALL update_route_availability(
+                NEW.id, 
+                reservation_record.departure_time, 
+                reservation_record.arrival_time
+            );
+        END LOOP;
     END IF;
     
     RETURN NEW;
@@ -634,21 +655,9 @@ CREATE TRIGGER trigger_prevent_route_deletion
     EXECUTE FUNCTION prevent_route_deletion();
 
 -- Function to automatically create route availability when route is created
-CREATE OR REPLACE FUNCTION create_route_availability()
-RETURNS TRIGGER AS $$
-BEGIN
-    INSERT INTO route_availability (route_id, total_capacity, booked_seats, available_seats, last_updated)
-    VALUES (NEW.id, NEW.vehicle_capacity, 0, NEW.vehicle_capacity, CURRENT_TIMESTAMP)
-    ON CONFLICT (route_id) DO NOTHING;
-    
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER trigger_create_route_availability
-    AFTER INSERT ON routes
-    FOR EACH ROW
-    EXECUTE FUNCTION create_route_availability();
+-- Note: route_availability is now created per departure time when reservations are made
+-- No need to pre-create entries when routes are created
+-- The availability will be calculated on-demand using calculate_booked_seats()
 
 -- Function to automatically create route statistics when route is created
 CREATE OR REPLACE FUNCTION create_route_statistics()

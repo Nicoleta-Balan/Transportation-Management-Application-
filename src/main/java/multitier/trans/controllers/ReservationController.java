@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -54,19 +55,31 @@ public class ReservationController {
 
     /**
      * GET /api/reservations
-     * Gets all reservations.
+     * Gets all reservations (Admin only).
      */
-
     @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public List<Reservation> getAllReservations() {
         return reservationService.getAllReservations();
     }
 
     /**
+     * GET /api/reservations/my-reservations
+     * Gets reservations for the currently authenticated user.
+     */
+    @GetMapping("/my-reservations")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    public List<Reservation> getMyReservations() {
+        return reservationService.getMyReservations();
+    }
+
+    /**
      * GET /api/reservations/{id}
      * Gets a single reservation by its ID.
+     * Users can only access their own reservations, admins can access any.
      */
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     public ResponseEntity<Reservation> getReservationById(@PathVariable Long id) {
         return reservationService.getReservationById(id)
                 .map(ResponseEntity::ok) // 200 OK if found

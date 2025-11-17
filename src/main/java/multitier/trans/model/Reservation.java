@@ -20,13 +20,18 @@ public class Reservation {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @NotNull(message = "User cannot be null")
+    @ManyToOne
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
+
     @NotNull(message = "Route cannot be null")
     @ManyToOne
     @JoinColumn(name = "route_id", nullable = false)
     private Route route;
 
-    @NotBlank(message = "Passenger name cannot be blank")
-    @Column(name = "passenger_name", nullable = false)
+    // Passenger details are optional - will default to user's info if not provided
+    @Column(name = "passenger_name")
     private String passengerName;
 
     @Column(name = "passenger_email")
@@ -213,5 +218,13 @@ public class Reservation {
 
     public void setTotalFare(BigDecimal totalFare) {
         this.totalFare = totalFare;
+    }
+
+    public User getUser() {
+        return user;
+    }
+
+    public void setUser(User user) {
+        this.user = user;
     }
 }

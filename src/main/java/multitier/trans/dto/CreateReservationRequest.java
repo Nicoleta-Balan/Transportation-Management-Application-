@@ -18,10 +18,11 @@ public class CreateReservationRequest {
     @NotNull(message = "Route ID cannot be null")
     private Long routeId;
 
-    @NotBlank(message = "Passenger name cannot be blank")
+    // Optional: If not provided, will use the authenticated user's details
     private String passengerName;
 
-    @Email(message = "Passenger email must be valid")
+    // Optional: If not provided, will use the authenticated user's email
+    // Note: @Email allows null, but we validate format if provided
     private String passengerEmail;
 
     @Size(max = 20, message = "Passenger phone number must be at most 20 characters")

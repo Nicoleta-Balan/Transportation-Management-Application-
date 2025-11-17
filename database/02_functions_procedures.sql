@@ -165,40 +165,82 @@ $$ LANGUAGE plpgsql;
 -- AVAILABILITY CHECK FUNCTIONS
 -- ============================================================================
 
--- Function to check seat availability for a route
+-- Function to check seat availability for a route at a specific departure time
 CREATE OR REPLACE FUNCTION check_seat_availability(
     p_route_id BIGINT,
+    p_departure_time TIMESTAMP,
     p_required_seats INTEGER
 )
 RETURNS BOOLEAN AS $$
 DECLARE
     v_available_seats INTEGER;
+    v_total_capacity INTEGER;
+    v_booked_seats INTEGER;
 BEGIN
     SELECT available_seats INTO v_available_seats
     FROM route_availability
-    WHERE route_id = p_route_id;
+    WHERE route_id = p_route_id
+      AND departure_time = p_departure_time;
     
-    -- If route_availability doesn't exist, return false
+    -- If route_availability doesn't exist for this departure time, calculate it
     IF v_available_seats IS NULL THEN
-        RETURN FALSE;
+        -- Get route capacity
+        SELECT vehicle_capacity INTO v_total_capacity
+        FROM routes
+        WHERE id = p_route_id;
+        
+        IF v_total_capacity IS NULL THEN
+            RETURN FALSE;
+        END IF;
+        
+        -- Calculate booked seats for this time period
+        -- Note: Using default 1 hour interval if arrival time not known
+        v_booked_seats := calculate_booked_seats(
+            p_route_id, 
+            p_departure_time, 
+            p_departure_time + INTERVAL '1 hour'
+        );
+        
+        v_available_seats := GREATEST(0, v_total_capacity - v_booked_seats);
     END IF;
     
     RETURN v_available_seats >= p_required_seats;
 END;
 $$ LANGUAGE plpgsql;
 
--- Function to get available seats for a route
-CREATE OR REPLACE FUNCTION get_available_seats(p_route_id BIGINT)
+-- Function to get available seats for a route at a specific departure time
+CREATE OR REPLACE FUNCTION get_available_seats(
+    p_route_id BIGINT,
+    p_departure_time TIMESTAMP
+)
 RETURNS INTEGER AS $$
 DECLARE
     v_available_seats INTEGER;
+    v_total_capacity INTEGER;
+    v_booked_seats INTEGER;
 BEGIN
     SELECT available_seats INTO v_available_seats
     FROM route_availability
-    WHERE route_id = p_route_id;
+    WHERE route_id = p_route_id
+      AND departure_time = p_departure_time;
     
     IF v_available_seats IS NULL THEN
-        RETURN 0;
+        -- Calculate on-the-fly if not cached
+        SELECT vehicle_capacity INTO v_total_capacity
+        FROM routes
+        WHERE id = p_route_id;
+        
+        IF v_total_capacity IS NULL THEN
+            RETURN 0;
+        END IF;
+        
+        v_booked_seats := calculate_booked_seats(
+            p_route_id, 
+            p_departure_time, 
+            p_departure_time + INTERVAL '1 hour'
+        );
+        
+        RETURN GREATEST(0, v_total_capacity - v_booked_seats);
     END IF;
     
     RETURN v_available_seats;
@@ -354,8 +396,13 @@ $$ LANGUAGE plpgsql;
 -- PROCEDURES
 -- ============================================================================
 
--- Procedure to update route availability
-CREATE OR REPLACE PROCEDURE update_route_availability(p_route_id BIGINT)
+-- Procedure to update route availability for a specific departure time
+-- Uses calculate_booked_seats() to correctly handle time-based overlap
+CREATE OR REPLACE PROCEDURE update_route_availability(
+    p_route_id BIGINT,
+    p_departure_time TIMESTAMP,
+    p_arrival_time TIMESTAMP
+)
 LANGUAGE plpgsql AS $$
 DECLARE
     v_total_capacity INTEGER;
@@ -371,20 +418,35 @@ BEGIN
         RAISE EXCEPTION 'Route % not found', p_route_id;
     END IF;
     
-    -- Calculate booked seats (only confirmed and pending reservations)
-    SELECT COALESCE(SUM(seat_count), 0) INTO v_booked_seats
-    FROM reservations
-    WHERE route_id = p_route_id
-      AND status IN ('PENDING', 'CONFIRMED');
+    -- Use calculate_booked_seats() to get seats booked for overlapping time periods
+    -- This correctly handles multiple trips on the same route at different times
+    v_booked_seats := calculate_booked_seats(p_route_id, p_departure_time, p_arrival_time);
     
     -- Calculate available seats
     v_available_seats := GREATEST(0, v_total_capacity - v_booked_seats);
     
-    -- Insert or update route availability
-    INSERT INTO route_availability (route_id, total_capacity, booked_seats, available_seats, last_updated)
-    VALUES (p_route_id, v_total_capacity, v_booked_seats, v_available_seats, CURRENT_TIMESTAMP)
-    ON CONFLICT (route_id) 
+    -- Insert or update route availability for this specific departure time
+    INSERT INTO route_availability (
+        route_id, 
+        departure_time, 
+        arrival_time,
+        total_capacity, 
+        booked_seats, 
+        available_seats, 
+        last_updated
+    )
+    VALUES (
+        p_route_id, 
+        p_departure_time, 
+        p_arrival_time,
+        v_total_capacity, 
+        v_booked_seats, 
+        v_available_seats, 
+        CURRENT_TIMESTAMP
+    )
+    ON CONFLICT (route_id, departure_time) 
     DO UPDATE SET
+        arrival_time = EXCLUDED.arrival_time,
         total_capacity = EXCLUDED.total_capacity,
         booked_seats = EXCLUDED.booked_seats,
         available_seats = EXCLUDED.available_seats,
@@ -441,10 +503,13 @@ CREATE OR REPLACE PROCEDURE cancel_reservation(
 LANGUAGE plpgsql AS $$
 DECLARE
     v_route_id BIGINT;
+    v_departure_time TIMESTAMP;
+    v_arrival_time TIMESTAMP;
     v_current_status VARCHAR(50);
 BEGIN
-    -- Get reservation details
-    SELECT route_id, status INTO v_route_id, v_current_status
+    -- Get reservation details including departure/arrival times
+    SELECT route_id, departure_time, arrival_time, status 
+    INTO v_route_id, v_departure_time, v_arrival_time, v_current_status
     FROM reservations
     WHERE id = p_reservation_id;
     
@@ -473,8 +538,8 @@ BEGIN
     INSERT INTO reservation_status_history (reservation_id, old_status, new_status, changed_by, change_reason)
     VALUES (p_reservation_id, v_current_status, 'CANCELLED', p_cancelled_by, p_reason);
     
-    -- Update route availability
-    CALL update_route_availability(v_route_id);
+    -- Update route availability for this specific departure time
+    CALL update_route_availability(v_route_id, v_departure_time, v_arrival_time);
     
     -- Update route statistics
     CALL update_route_statistics(v_route_id);
@@ -489,10 +554,13 @@ CREATE OR REPLACE PROCEDURE confirm_reservation(
 LANGUAGE plpgsql AS $$
 DECLARE
     v_route_id BIGINT;
+    v_departure_time TIMESTAMP;
+    v_arrival_time TIMESTAMP;
     v_current_status VARCHAR(50);
 BEGIN
-    -- Get reservation details
-    SELECT route_id, status INTO v_route_id, v_current_status
+    -- Get reservation details including departure/arrival times
+    SELECT route_id, departure_time, arrival_time, status 
+    INTO v_route_id, v_departure_time, v_arrival_time, v_current_status
     FROM reservations
     WHERE id = p_reservation_id;
     
@@ -519,8 +587,8 @@ BEGIN
     INSERT INTO reservation_status_history (reservation_id, old_status, new_status, changed_by)
     VALUES (p_reservation_id, v_current_status, 'CONFIRMED', p_confirmed_by);
     
-    -- Update route availability
-    CALL update_route_availability(v_route_id);
+    -- Update route availability for this specific departure time
+    CALL update_route_availability(v_route_id, v_departure_time, v_arrival_time);
     
     -- Update route statistics
     CALL update_route_statistics(v_route_id);
@@ -591,13 +659,24 @@ END;
 $$;
 
 -- Procedure to initialize route availability for all routes
+-- Creates availability entries for all unique departure times from reservations
 CREATE OR REPLACE PROCEDURE initialize_all_route_availability()
 LANGUAGE plpgsql AS $$
 DECLARE
-    route_record RECORD;
+    reservation_record RECORD;
 BEGIN
-    FOR route_record IN SELECT id FROM routes LOOP
-        CALL update_route_availability(route_record.id);
+    -- Update availability for each unique (route_id, departure_time) combination
+    FOR reservation_record IN 
+        SELECT DISTINCT route_id, departure_time, arrival_time
+        FROM reservations
+        WHERE status IN ('PENDING', 'CONFIRMED')
+        ORDER BY route_id, departure_time
+    LOOP
+        CALL update_route_availability(
+            reservation_record.route_id,
+            reservation_record.departure_time,
+            reservation_record.arrival_time
+        );
     END LOOP;
 END;
 $$;

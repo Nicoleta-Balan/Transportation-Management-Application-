@@ -6,6 +6,7 @@ import multitier.trans.model.RouteStatistics;
 import multitier.trans.service.AnalyticsService;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -26,16 +27,19 @@ public class AnalyticsController {
     }
 
     @GetMapping("/routes/{routeId}/availability")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<RouteAvailability> getRouteAvailability(@PathVariable Long routeId) {
         return ResponseEntity.ok(analyticsService.getRouteAvailability(routeId));
     }
 
     @GetMapping("/routes/{routeId}/statistics")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<RouteStatistics> getRouteStatistics(@PathVariable Long routeId) {
         return ResponseEntity.ok(analyticsService.getRouteStatistics(routeId));
     }
 
     @GetMapping("/revenue")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<RevenueSummary>> getRevenueSummary(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,

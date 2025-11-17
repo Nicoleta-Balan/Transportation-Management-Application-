@@ -5,16 +5,25 @@
 -- It should run after all tables, functions, and triggers are created.
 -- ============================================================================
 
--- Initialize route availability for all existing routes
--- (Triggers will automatically create these when routes are inserted,
---  but this ensures they exist for any routes created before triggers)
+-- Initialize route availability for all existing reservations
+-- Creates availability entries for each unique (route_id, departure_time) combination
+-- Uses calculate_booked_seats() to correctly handle time-based overlap
 DO $$
 DECLARE
-    route_record RECORD;
+    reservation_record RECORD;
 BEGIN
-    FOR route_record IN SELECT id FROM routes LOOP
+    FOR reservation_record IN 
+        SELECT DISTINCT route_id, departure_time, arrival_time
+        FROM reservations
+        WHERE status IN ('PENDING', 'CONFIRMED')
+        ORDER BY route_id, departure_time
+    LOOP
         BEGIN
-            CALL update_route_availability(route_record.id);
+            CALL update_route_availability(
+                reservation_record.route_id,
+                reservation_record.departure_time,
+                reservation_record.arrival_time
+            );
         EXCEPTION
             WHEN OTHERS THEN
                 -- Route availability might already exist, continue

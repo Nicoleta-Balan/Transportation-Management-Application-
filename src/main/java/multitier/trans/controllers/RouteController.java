@@ -4,6 +4,7 @@ import multitier.trans.model.Route;
 import multitier.trans.service.RouteService; // Import the Service Interface
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid; // Import @Valid for validation
 import java.util.List;
@@ -30,6 +31,7 @@ public class RouteController {
      */
 
     @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public List<Route> getAllRoutes() {
         // Now calls the service
         return routeService.findAllRoutes();
@@ -57,6 +59,7 @@ public class RouteController {
      */
 
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Route> createRoute(@Valid @RequestBody CreateRouteRequest request) {
 
         // The controller's only job is to pass the "form" (DTO)

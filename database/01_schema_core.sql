@@ -16,6 +16,7 @@ DROP TABLE IF EXISTS vat_rates CASCADE;
 DROP TABLE IF EXISTS route_statistics CASCADE;
 DROP TABLE IF EXISTS route_availability CASCADE;
 DROP TABLE IF EXISTS revenue_summary CASCADE;
+DROP TABLE IF EXISTS users CASCADE;
 
 -- ============================================================================
 -- ENUMERATION TABLES
@@ -47,6 +48,41 @@ INSERT INTO vehicle_classes (class, description) VALUES
 ('COACH', 'Long-distance, higher-comfort bus'),
 ('MINI_BUS', 'Smaller van or shuttle'),
 ('DOUBLE_DECKER', 'Two-level bus');
+
+-- ============================================================================
+-- AUTHENTICATION & AUTHORIZATION TABLES
+-- ============================================================================
+
+-- Users Table (for authentication and authorization)
+-- Uses JPA SINGLE_TABLE inheritance strategy - all user types in one table
+CREATE TABLE users (
+    id BIGSERIAL PRIMARY KEY,
+    user_type VARCHAR(20) NOT NULL DEFAULT 'USER',  -- Discriminator column for inheritance
+    username VARCHAR(50) NOT NULL UNIQUE,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    role VARCHAR(20) NOT NULL DEFAULT 'USER',  -- Kept for backward compatibility
+    first_name VARCHAR(100),
+    last_name VARCHAR(100),
+    phone VARCHAR(20),
+    enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_login TIMESTAMP,
+    CONSTRAINT chk_user_type CHECK (user_type IN ('USER', 'ADMIN')),
+    CONSTRAINT chk_user_role CHECK (role IN ('USER', 'ADMIN')),
+    CONSTRAINT chk_username_length CHECK (CHAR_LENGTH(username) >= 3 AND CHAR_LENGTH(username) <= 50),
+    CONSTRAINT chk_email_format CHECK (email ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$')
+);
+
+CREATE INDEX idx_users_username ON users(username);
+CREATE INDEX idx_users_email ON users(email);
+CREATE INDEX idx_users_role ON users(role);
+CREATE INDEX idx_users_type ON users(user_type);
+
+COMMENT ON TABLE users IS 'Stores user accounts for authentication and authorization. Uses JPA SINGLE_TABLE inheritance - all user types stored in one table.';
+COMMENT ON COLUMN users.user_type IS 'Discriminator column for JPA inheritance: USER (RegularUser) or ADMIN (AdminUser)';
+COMMENT ON COLUMN users.role IS 'Role field kept for backward compatibility. USER: Can create reservations. ADMIN: Can manage stations, routes, timetables, and access reports';
 
 -- ============================================================================
 -- CORE ENTITY TABLES
@@ -159,8 +195,11 @@ CREATE TABLE fare_policies (
 -- Reservations Table (with denormalized attributes)
 CREATE TABLE reservations (
     id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL,
     route_id BIGINT NOT NULL,
-    passenger_name VARCHAR(100) NOT NULL,
+    -- Passenger details (optional - defaults to user's info if not provided)
+    -- Allows booking for others while maintaining historical accuracy
+    passenger_name VARCHAR(100),
     passenger_email VARCHAR(255),
     passenger_phone VARCHAR(20),
     seat_count INTEGER NOT NULL DEFAULT 1,
@@ -184,6 +223,8 @@ CREATE TABLE reservations (
     cancellation_reason TEXT,
     created_by VARCHAR(100),
     updated_by VARCHAR(100),
+    CONSTRAINT fk_reservation_user FOREIGN KEY (user_id) 
+        REFERENCES users(id) ON DELETE RESTRICT,
     CONSTRAINT fk_reservation_route FOREIGN KEY (route_id) 
         REFERENCES routes(id) ON DELETE RESTRICT,
     CONSTRAINT fk_reservation_category FOREIGN KEY (passenger_category) 
@@ -255,9 +296,12 @@ CREATE TABLE reservation_status_history (
 -- DENORMALIZED TABLES (for performance optimization)
 -- ============================================================================
 
--- Route Availability Table (denormalized - stores available seats count)
+-- Route Availability Table (denormalized - stores available seats count per departure time)
+-- Tracks availability for each specific trip/departure time on a route
 CREATE TABLE route_availability (
-    route_id BIGINT PRIMARY KEY,
+    route_id BIGINT NOT NULL,
+    departure_time TIMESTAMP NOT NULL,
+    arrival_time TIMESTAMP NOT NULL,
     total_capacity INTEGER NOT NULL,
     booked_seats INTEGER NOT NULL DEFAULT 0,
     available_seats INTEGER NOT NULL,
@@ -265,7 +309,9 @@ CREATE TABLE route_availability (
     CONSTRAINT fk_route_availability FOREIGN KEY (route_id) 
         REFERENCES routes(id) ON DELETE CASCADE,
     CONSTRAINT chk_availability_seats CHECK (booked_seats >= 0 AND available_seats >= 0),
-    CONSTRAINT chk_availability_capacity CHECK (booked_seats + available_seats <= total_capacity)
+    CONSTRAINT chk_availability_capacity CHECK (booked_seats + available_seats <= total_capacity),
+    CONSTRAINT chk_availability_times CHECK (arrival_time > departure_time),
+    PRIMARY KEY (route_id, departure_time)
 );
 
 -- Route Statistics Table (denormalized - stores aggregated statistics)
@@ -338,8 +384,10 @@ ON fare_policies(route_id, passenger_category, vehicle_class)
 WHERE status = 'ACTIVE' AND effective_to IS NULL;
 
 -- Reservations indexes
+CREATE INDEX idx_reservations_user ON reservations(user_id);
 CREATE INDEX idx_reservations_route ON reservations(route_id);
 CREATE INDEX idx_reservations_status ON reservations(status);
+CREATE INDEX idx_reservations_user_status ON reservations(user_id, status);
 CREATE INDEX idx_reservations_passenger_name ON reservations(passenger_name);
 CREATE INDEX idx_reservations_email ON reservations(passenger_email);
 CREATE INDEX idx_reservations_departure_time ON reservations(departure_time);
@@ -353,6 +401,8 @@ CREATE INDEX idx_vat_rates_effective ON vat_rates(effective_from, effective_to);
 
 -- Route Availability indexes
 CREATE INDEX idx_route_availability_available ON route_availability(available_seats) WHERE available_seats > 0;
+CREATE INDEX idx_route_availability_route_departure ON route_availability(route_id, departure_time);
+CREATE INDEX idx_route_availability_departure ON route_availability(departure_time);
 
 -- Revenue Summary indexes
 CREATE INDEX idx_revenue_summary_date ON revenue_summary(summary_date);
@@ -366,11 +416,15 @@ CREATE INDEX idx_revenue_summary_date_route ON revenue_summary(summary_date, rou
 COMMENT ON TABLE stations IS 'Stores information about transportation stations';
 COMMENT ON TABLE routes IS 'Stores routes between stations with capacity information';
 COMMENT ON TABLE fare_policies IS 'Stores fare pricing policies with temporal support (effective dates)';
-COMMENT ON TABLE reservations IS 'Stores passenger reservations with denormalized fare information';
+COMMENT ON TABLE reservations IS 'Stores passenger reservations with denormalized fare information. Linked to users table to track who made each reservation.';
+COMMENT ON COLUMN reservations.user_id IS 'Foreign key to users table. Identifies which user account created this reservation.';
+COMMENT ON COLUMN reservations.passenger_name IS 'Optional: Name of the passenger. If NULL, defaults to user''s name (first_name + last_name). Allows booking for others.';
+COMMENT ON COLUMN reservations.passenger_email IS 'Optional: Email of the passenger. If NULL, defaults to user''s email. Maintains historical accuracy.';
+COMMENT ON COLUMN reservations.passenger_phone IS 'Optional: Phone of the passenger. If NULL, defaults to user''s phone.';
 COMMENT ON TABLE route_timetables IS 'Stores named timetables/schedules for specific routes';
 COMMENT ON TABLE route_timetable_entries IS 'Stores individual timetable entries per day of week for a route timetable';
 COMMENT ON TABLE vat_rates IS 'Stores VAT rates with temporal support (tracks VAT changes over time)';
-COMMENT ON TABLE route_availability IS 'Denormalized table storing current seat availability for fast queries';
+COMMENT ON TABLE route_availability IS 'Denormalized table storing current seat availability per departure time for fast queries. Uses time-aware overlap checking via calculate_booked_seats().';
 COMMENT ON TABLE route_statistics IS 'Denormalized table storing aggregated route statistics';
 COMMENT ON TABLE revenue_summary IS 'Denormalized table storing revenue summaries by date, route, category, and class';
 COMMENT ON TABLE fare_policy_history IS 'Audit trail for fare policy changes';

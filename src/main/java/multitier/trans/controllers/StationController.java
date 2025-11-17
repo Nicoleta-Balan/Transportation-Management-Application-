@@ -5,6 +5,7 @@ import multitier.trans.service.StationService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -32,6 +33,7 @@ public class StationController {
      * If validation fails, it automatically returns a 400 Bad Request.
      */
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Station> createStation(@Valid @RequestBody Station station) {
         Station createdStation = stationService.createStation(station);
         // Return 201 Created
@@ -43,6 +45,7 @@ public class StationController {
      * Gets all stations.
      */
     @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public List<Station> getAllStations() {
         return stationService.getAllStations();
     }

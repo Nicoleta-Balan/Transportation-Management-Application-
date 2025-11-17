@@ -27,6 +27,13 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
     List<Reservation> findByRouteId(Long routeId);
 
     /**
+     * Custom query: Finds all reservations for a specific user.
+     * Spring Data JPA will auto-generate the SQL:
+     * "SELECT * FROM reservations WHERE user_id = ?"
+     */
+    List<Reservation> findByUserId(Long userId);
+
+    /**
      * Custom query: Finds all reservations for a specific passenger.
      * Spring Data JPA will auto-generate the SQL:
      * "SELECT * FROM reservations WHERE passenger_name = ?"

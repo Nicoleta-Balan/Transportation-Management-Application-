@@ -7,6 +7,7 @@ import multitier.trans.dto.RouteTimetableResponse;
 import multitier.trans.service.TimetableService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -27,6 +28,7 @@ public class RouteTimetableController {
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<RouteTimetableResponse> createTimetable(@PathVariable Long routeId,
                                                                   @Valid @RequestBody CreateRouteTimetableRequest request) {
         RouteTimetableResponse response = timetableService.createTimetable(routeId, request);
@@ -34,11 +36,13 @@ public class RouteTimetableController {
     }
 
     @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public List<RouteTimetableResponse> getTimetables(@PathVariable Long routeId) {
         return timetableService.getTimetablesForRoute(routeId);
     }
 
     @PostMapping("/{timetableId}/entries")
+    @PreAuthorize("hasRole('ADMIN')")
     public RouteTimetableResponse addEntries(@PathVariable Long routeId,
                                              @PathVariable Long timetableId,
                                              @Valid @RequestBody AddRouteTimetableEntriesRequest request) {

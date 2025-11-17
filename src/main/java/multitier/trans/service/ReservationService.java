@@ -19,13 +19,18 @@ public interface ReservationService {
      */
     Reservation cancelReservation(Long reservationId);
 
-    /* Finds all reservations. */
+    /* Finds all reservations (Admin only). */
     List<Reservation> getAllReservations();
 
     /**
-     * Finds a single reservation by its ID.
+     * Finds all reservations for the currently authenticated user.
      */
+    List<Reservation> getMyReservations();
 
+    /**
+     * Finds a single reservation by its ID.
+     * Users can only access their own reservations, admins can access any.
+     */
     Optional<Reservation> getReservationById(Long id);
 
     /**
