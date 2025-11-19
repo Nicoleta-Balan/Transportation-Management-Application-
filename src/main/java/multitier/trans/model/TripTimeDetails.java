@@ -6,7 +6,6 @@ import java.time.LocalDateTime;
 
 /**
  * Implements (Create Value Object - Trip/Time Details).
- *
  * This is a "Value Object" that will be embedded into other entities (like Reservation).
  * It groups related time details together.
  * @Embeddable means this class's fields will be stored as columns

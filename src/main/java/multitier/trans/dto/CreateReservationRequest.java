@@ -11,8 +11,8 @@ import java.time.LocalDateTime;
 
 /**
  * DTO for handling a new reservation request.
- * MODIFIED to include fare details needed for SCRUM-34.
  */
+
 public class CreateReservationRequest {
 
     @NotNull(message = "Route ID cannot be null")

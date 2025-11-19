@@ -4,7 +4,7 @@ import multitier.trans.model.Station;
 import java.util.List;
 
 /**
- * Service Layer Interface for Station operations (implements SCRUM-17).
+ * Service Layer Interface for Station operations
  * Defines the business logic contract for managing stations.
  */
 public interface StationService {

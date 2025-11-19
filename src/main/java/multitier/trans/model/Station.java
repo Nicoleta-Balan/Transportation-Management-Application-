@@ -15,6 +15,7 @@ import multitier.trans.model.converter.StationStatusConverter;
 /**
  * Represents a transport station (e.g., bus station, train station).
  */
+
 @Entity
 @Table(name = "stations")
 public class Station {

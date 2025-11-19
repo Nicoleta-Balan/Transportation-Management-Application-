@@ -28,6 +28,7 @@ import java.util.Optional;
  * Uses Spring Data JPA repositories for all data access operations.
  * Uses ReservationFactory for creating reservation entities.
  */
+
 @Service
 @Transactional
 public class ReservationServiceImpl implements ReservationService {

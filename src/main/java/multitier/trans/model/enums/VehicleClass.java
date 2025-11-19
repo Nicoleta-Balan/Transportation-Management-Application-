@@ -8,5 +8,5 @@ public enum VehicleClass {
     STANDARD,       // A standard intercity bus
     COACH,          // A long-distance, higher-comfort bus
     MINI_BUS,       // A smaller van or shuttle
-    DOUBLE_DECKER   // A two-level bus
+    DOUBLE_DECKER   //two-level bus
 }

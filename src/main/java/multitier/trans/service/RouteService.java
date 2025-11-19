@@ -7,7 +7,7 @@ import java.util.Optional;
 
 /**
  * Service Layer Interface for Route
- * This "complex" version uses a DTO to create routes, aligning
+ * Uses a DTO to create routes, aligning
  * .
  */
 public interface RouteService {

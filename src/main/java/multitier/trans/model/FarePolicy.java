@@ -30,13 +30,13 @@ public class FarePolicy {
     @JoinColumn(name = "route_id", nullable = false)
     private Route route;
 
-    // The policy applies to a specific passenger type (from SCRUM-32)
+    // The policy applies to a specific passenger type
     @NotNull(message = "Passenger category cannot be null")
     @Enumerated(EnumType.STRING) // This is important! It stores "ADULT" in the DB, not 0.
     @Column(name = "passenger_category", nullable = false)
     private PassengerCategory passengerCategory;
 
-    // The policy applies to a specific vehicle class (from SCRUM-32)
+    // The policy applies to a specific vehicle class
     @NotNull(message = "Vehicle class cannot be null")
     @Enumerated(EnumType.STRING)
     @Column(name = "vehicle_class", nullable = false)

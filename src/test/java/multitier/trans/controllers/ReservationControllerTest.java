@@ -6,7 +6,6 @@ import multitier.trans.model.Reservation;
 import multitier.trans.model.Route;
 import multitier.trans.model.Station;
 import multitier.trans.model.TripTimeDetails;
-// Importăm noile Enums
 import multitier.trans.model.enums.PassengerCategory;
 import multitier.trans.model.enums.ReservationStatus;
 import multitier.trans.model.enums.StationStatus;
@@ -22,7 +21,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDateTime;
 
-// Importuri statice
+
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -42,7 +41,6 @@ public class ReservationControllerTest {
     @MockBean
     private ReservationService reservationService;
 
-    // Date de test reutilizabile
     private Station testStationA;
     private Station testStationB;
     private Route testRoute;
