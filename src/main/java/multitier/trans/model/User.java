@@ -15,7 +15,7 @@ import java.time.LocalDateTime;
 @Table(name = "users")
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
 @DiscriminatorColumn(name = "user_type", discriminatorType = DiscriminatorType.STRING, length = 20)
-@DiscriminatorValue("USER")  // Default discriminator value
+// Note: No @DiscriminatorValue on base class - subclasses (RegularUser, AdminUser) define their own
 public class User extends BaseEntity {
 
     @Id

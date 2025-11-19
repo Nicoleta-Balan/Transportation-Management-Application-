@@ -54,6 +54,10 @@ services:
       # Flyway configuration
       SPRING_FLYWAY_ENABLED: "true"
       SPRING_FLYWAY_BASELINE_ON_MIGRATE: "true"
+      # Data initialization configuration (Spring Boot converts APP_DATA_INITIALIZE to app.data.initialize)
+      APP_DATA_INITIALIZE: "true"
+      # Alternative: use Spring Boot property format directly
+      SPRING_APPLICATION_JSON: '{"app":{"data":{"initialize":true}}}'
     restart: always
 
   # ----------------------------------------------------

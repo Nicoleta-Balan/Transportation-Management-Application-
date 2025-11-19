@@ -40,7 +40,7 @@ import java.util.List;
  * - Disable: Set app.data.initialize=false
  */
 @Configuration
-@ConditionalOnProperty(name = "app.data.initialize", havingValue = "true", matchIfMissing = false)
+@ConditionalOnProperty(name = "app.data.initialize", havingValue = "true", matchIfMissing = true)
 @Order(100) // Run after Flyway migrations (which typically run at order 0-50)
 public class DataInitializer {
 
