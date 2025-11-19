@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * API Controller ("The Gate") for handling all Reservation requests.
+ * API Controller for handling all Reservation requests.
  */
 
 @RestController

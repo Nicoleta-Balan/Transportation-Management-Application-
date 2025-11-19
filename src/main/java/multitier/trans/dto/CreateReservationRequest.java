@@ -9,7 +9,6 @@ import java.time.LocalDateTime;
 
 /**
  * DTO for handling a new reservation request.
- * MODIFIED to include fare details needed for SCRUM-34.
  */
 public class CreateReservationRequest {
 
@@ -34,7 +33,7 @@ public class CreateReservationRequest {
     @NotNull(message = "Vehicle class must be specified")
     private VehicleClass vehicleClass;
 
-    // --- START: Getters and Setters (FIX) ---
+    // Getters and Setters
     // These methods were missing, causing the build failure.
 
     public Long getRouteId() {
@@ -92,5 +91,5 @@ public class CreateReservationRequest {
     public void setVehicleClass(VehicleClass vehicleClass) {
         this.vehicleClass = vehicleClass;
     }
-    // --- END: Getters and Setters (FIX) ---
+
 }
