@@ -9,13 +9,14 @@ import java.time.LocalDateTime;
 /**
  * Base User entity using JPA Inheritance.
  * Uses SINGLE_TABLE strategy - all user types stored in one table with discriminator column.
+ * Extends BaseEntity for automatic timestamp management (createdAt, updatedAt).
  */
 @Entity
 @Table(name = "users")
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
 @DiscriminatorColumn(name = "user_type", discriminatorType = DiscriminatorType.STRING, length = 20)
 @DiscriminatorValue("USER")  // Default discriminator value
-public class User {
+public class User extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -52,18 +53,10 @@ public class User {
     @Column(nullable = false)
     private Boolean enabled = true;
 
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
-
-    @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
-
     @Column(name = "last_login")
     private LocalDateTime lastLogin;
 
     public User() {
-        this.createdAt = LocalDateTime.now();
-        this.updatedAt = LocalDateTime.now();
     }
 
     public User(String username, String email, String passwordHash) {
@@ -90,11 +83,6 @@ public class User {
      */
     public void setRole(String role) {
         this.role = role;
-    }
-
-    @PreUpdate
-    public void preUpdate() {
-        this.updatedAt = LocalDateTime.now();
     }
 
     // Getters and Setters
@@ -153,22 +141,6 @@ public class User {
 
     public void setEnabled(Boolean enabled) {
         this.enabled = enabled;
-    }
-
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public LocalDateTime getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(LocalDateTime updatedAt) {
-        this.updatedAt = updatedAt;
     }
 
     public LocalDateTime getLastLogin() {

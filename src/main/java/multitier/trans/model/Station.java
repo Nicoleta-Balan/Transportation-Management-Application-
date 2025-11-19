@@ -6,8 +6,11 @@ import jakarta.persistence.Id;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import multitier.trans.model.enums.StationStatus;
+import multitier.trans.model.converter.StationStatusConverter;
 
 /**
  * Represents a transport station (e.g., bus station, train station).
@@ -29,14 +32,14 @@ public class Station {
     private String description;
 
     @NotNull(message = "Status cannot be null")
-    @Size(min = 2, max = 50, message = "Status must be between 2 and 50 characters")
+    @Convert(converter = StationStatusConverter.class)
     @Column(nullable = false)
-    private String status;
+    private StationStatus status;
 
     public Station() {
     }
 
-    public Station(String name, String description, String status) {
+    public Station(String name, String description, StationStatus status) {
         this.name = name;
         this.description = description;
         this.status = status;
@@ -68,11 +71,11 @@ public class Station {
         this.description = description;
     }
 
-    public String getStatus() {
+    public StationStatus getStatus() {
         return status;
     }
 
-    public void setStatus(String status) {
+    public void setStatus(StationStatus status) {
         this.status = status;
     }
 }

@@ -3,6 +3,7 @@ package multitier.trans.model;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
@@ -12,18 +13,21 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotNull;
+import multitier.trans.model.enums.TimetableStatus;
+import multitier.trans.model.converter.TimetableStatusConverter;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
  * Represents a named timetable that groups multiple recurring trip entries for a route.
+ * Extends BaseEntity for automatic timestamp management (createdAt, updatedAt).
  */
 @Entity
 @Table(name = "route_timetables")
-public class RouteTimetable {
+public class RouteTimetable extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -45,14 +49,10 @@ public class RouteTimetable {
     @Column(name = "effective_to")
     private LocalDate effectiveTo;
 
+    @NotNull(message = "Status cannot be null")
+    @Convert(converter = TimetableStatusConverter.class)
     @Column(nullable = false, length = 20)
-    private String status = "ACTIVE";
-
-    @Column(name = "created_at")
-    private LocalDateTime createdAt;
-
-    @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
+    private TimetableStatus status = TimetableStatus.ACTIVE;
 
     @OneToMany(mappedBy = "timetable", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<RouteTimetableEntry> entries = new ArrayList<>();
@@ -108,28 +108,12 @@ public class RouteTimetable {
         this.effectiveTo = effectiveTo;
     }
 
-    public String getStatus() {
+    public TimetableStatus getStatus() {
         return status;
     }
 
-    public void setStatus(String status) {
+    public void setStatus(TimetableStatus status) {
         this.status = status;
-    }
-
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public LocalDateTime getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(LocalDateTime updatedAt) {
-        this.updatedAt = updatedAt;
     }
 
     public List<RouteTimetableEntry> getEntries() {

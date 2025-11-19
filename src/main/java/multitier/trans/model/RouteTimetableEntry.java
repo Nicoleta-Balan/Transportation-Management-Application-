@@ -14,15 +14,15 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
 import java.time.DayOfWeek;
-import java.time.LocalDateTime;
 import java.time.LocalTime;
 
 /**
  * Represents a single timetable entry for a specific day of the week.
+ * Extends BaseEntity for automatic timestamp management (createdAt, updatedAt).
  */
 @Entity
 @Table(name = "route_timetable_entries")
-public class RouteTimetableEntry {
+public class RouteTimetableEntry extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -44,12 +44,6 @@ public class RouteTimetableEntry {
     private LocalTime arrivalTime;
 
     private String notes;
-
-    @Column(name = "created_at")
-    private LocalDateTime createdAt;
-
-    @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
 
     public RouteTimetableEntry() {
     }
@@ -100,22 +94,6 @@ public class RouteTimetableEntry {
 
     public void setNotes(String notes) {
         this.notes = notes;
-    }
-
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public LocalDateTime getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(LocalDateTime updatedAt) {
-        this.updatedAt = updatedAt;
     }
 }
 

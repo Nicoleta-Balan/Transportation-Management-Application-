@@ -2,10 +2,11 @@ package multitier.trans.model;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import multitier.trans.model.enums.PassengerCategory;
+import multitier.trans.model.enums.ReservationStatus;
 import multitier.trans.model.enums.VehicleClass;
+import multitier.trans.model.converter.ReservationStatusConverter;
 import java.math.BigDecimal;
 
 /**
@@ -44,9 +45,10 @@ public class Reservation {
     @Column(name = "seat_count", nullable = false)
     private int seatCount;
 
-    @NotBlank(message = "Reservation status cannot be blank")
+    @NotNull(message = "Reservation status cannot be null")
+    @Convert(converter = ReservationStatusConverter.class)
     @Column(nullable = false)
-    private String status; // e.g., "CONFIRMED", "CANCELLED", "PENDING"
+    private ReservationStatus status; // CONFIRMED, CANCELLED, PENDING
 
     // Trip time details (embedded)
     @Embedded
@@ -56,20 +58,20 @@ public class Reservation {
     })
     private TripTimeDetails tripDetails;
 
-    // Denormalized fields (populated by database triggers)
-    @Column(name = "origin_station_name", insertable = false, updatable = false)
+    // Denormalized fields (populated by service layer, previously by database triggers)
+    @Column(name = "origin_station_name")
     private String originStationName;
 
-    @Column(name = "destination_station_name", insertable = false, updatable = false)
+    @Column(name = "destination_station_name")
     private String destinationStationName;
 
-    @Column(name = "base_fare", insertable = false, updatable = false)
+    @Column(name = "base_fare")
     private BigDecimal baseFare;
 
-    @Column(name = "vat_amount", insertable = false, updatable = false)
+    @Column(name = "vat_amount")
     private BigDecimal vatAmount;
 
-    @Column(name = "total_fare", insertable = false, updatable = false)
+    @Column(name = "total_fare")
     private BigDecimal totalFare;
 
 
@@ -156,11 +158,11 @@ public class Reservation {
         this.seatCount = seatCount;
     }
 
-    public String getStatus() {
+    public ReservationStatus getStatus() {
         return status;
     }
 
-    public void setStatus(String status) {
+    public void setStatus(ReservationStatus status) {
         this.status = status;
     }
 

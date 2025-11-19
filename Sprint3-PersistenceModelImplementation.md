@@ -2,362 +2,270 @@
 
 ## Architecture Overview
 
-The Transportation Management System uses a **layered persistence model** that bridges the gap between Java objects and PostgreSQL database tables:
+The Transportation Management System uses a **pure JPA/Hibernate persistence model** that manages the entire database schema and data access layer. The system follows a layered architecture where JPA entities map to database tables, Spring Data JPA repositories provide data access, and business services orchestrate operations.
 
 ```
-HTTP Request → Controller → Service → Repository → JPA/Hibernate → PostgreSQL Database
+HTTP Request → Controller → Service → Repository (Spring Data JPA) → JPA/Hibernate → PostgreSQL Database
 ```
 
 ---
 
-## 1. Database Layer (PostgreSQL)
+## 1. Database Schema Management
 
-### Schema Design
-- **Tables**: `users`, `reservations`, `routes`, `stations`, `fare_policies`, etc.
-- **Relationships**: Foreign keys with constraints (`ON DELETE RESTRICT`, `ON DELETE CASCADE`)
-- **Constraints**: Check constraints, unique constraints, NOT NULL
-- **Indexes**: For performance on frequently queried columns
+### 1.1 JPA/Hibernate Schema Generation
 
-**Example from schema:**
+**Current Approach**: Pure JPA/Hibernate schema management
+
+**Configuration** (`application.properties`):
+```properties
+spring.jpa.hibernate.ddl-auto=update
+spring.flyway.enabled=false
+```
+
+**How it works**:
+- JPA/Hibernate automatically creates and updates database tables based on `@Entity` annotations
+- On application startup, Hibernate compares entity definitions with database schema
+- Missing tables are created, missing columns are added
+- Schema changes are applied automatically (no manual SQL migrations needed)
+
+**Benefits**:
+- ✅ Single source of truth (entity classes define schema)
+- ✅ Type-safe schema definition
+- ✅ Automatic schema evolution
+- ✅ No migration file management
+
+**Entities managed by JPA** (15 total):
+- `AdminUser`, `FarePolicy`, `FarePolicyHistory`, `RegularUser`, `Reservation`, `ReservationStatusHistory`, `RevenueSummary`, `Route`, `RouteAvailability`, `RouteStatistics`, `RouteTimetable`, `RouteTimetableEntry`, `Station`, `User`, `VatRate`
+
+---
+
+## 2. Entity Model Layer
+
+### 2.1 Base Entity Pattern
+
+**BaseEntity** - Common timestamp fields with automatic management
+
+**Location**: `src/main/java/multitier/trans/model/BaseEntity.java`
+
+```java
+@MappedSuperclass
+@EntityListeners(BaseEntityListener.class)
+public abstract class BaseEntity {
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+    
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+}
+```
+
+**Entities extending BaseEntity**:
+- `RouteTimetable` - `src/main/java/multitier/trans/model/RouteTimetable.java`
+- `User` (and subclasses `RegularUser`, `AdminUser`) - `src/main/java/multitier/trans/model/User.java`
+- `RouteTimetableEntry` - `src/main/java/multitier/trans/model/RouteTimetableEntry.java`
+
+**How it works**:
+- `@MappedSuperclass` - Fields are inherited by subclasses but BaseEntity is not a table itself
+- `@EntityListeners(BaseEntityListener.class)` - Automatically applies listener to all subclasses
+- Timestamps are automatically managed via `@PrePersist` and `@PreUpdate` callbacks
+
+### 2.2 Entity Listeners
+
+#### BaseEntityListener
+
+**Location**: `src/main/java/multitier/trans/model/BaseEntityListener.java`
+
+**Callbacks implemented**:
+- `@PrePersist` - Sets `createdAt` and `updatedAt` before entity is saved
+- `@PreUpdate` - Updates `updatedAt` before entity is updated
+- `@PreRemove` - Hook for audit logging or cleanup before deletion
+
+**Applied to**: All entities extending `BaseEntity`
+
+**Usage example**:
+```java
+RouteTimetable timetable = new RouteTimetable();
+timetable.setName("Weekday Schedule");
+timetableRepository.save(timetable);
+// → BaseEntityListener.prePersist() automatically sets createdAt and updatedAt
+```
+
+#### FarePolicyHistoryListener
+
+**Location**: `src/main/java/multitier/trans/model/FarePolicyHistoryListener.java`
+
+**Callbacks implemented**:
+- `@PostPersist` - Records fare policy creation in history table
+- `@PostUpdate` - Records fare policy updates in history table
+- `@PreRemove` - Records fare policy deletion in history table
+
+**Applied to**: `FarePolicy` entity via `@EntityListeners(FarePolicyHistoryListener.class)`
+
+**How it accesses Spring beans**:
+- Uses `ApplicationContextProvider` to get `FarePolicyHistoryRepository`
+- Entity Listeners cannot use `@Autowired` directly (not Spring-managed)
+
+**Usage example**:
+```java
+FarePolicy policy = new FarePolicy();
+policy.setPrice(new BigDecimal("50.00"));
+farePolicyRepository.save(policy);
+// → FarePolicyHistoryListener.onFarePolicyCreated() automatically creates history record
+```
+
+#### ReservationStatusHistoryListener
+
+**Location**: `src/main/java/multitier/trans/model/ReservationStatusHistoryListener.java`
+
+**Callbacks implemented**:
+- `@PostUpdate` - Placeholder for reservation status change tracking
+
+**Note**: Status changes are primarily tracked in `ReservationServiceImpl.recordStatusHistory()` method, as old status values are needed and not available in `@PostUpdate`.
+
+---
+
+## 3. Entity Relationships
+
+### 3.1 Inheritance: User Hierarchy
+
+**Strategy**: `SINGLE_TABLE` inheritance
+
+**Base Entity**: `User`
+- Location: `src/main/java/multitier/trans/model/User.java`
+- Annotation: `@Inheritance(strategy = InheritanceType.SINGLE_TABLE)`
+- Discriminator: `@DiscriminatorColumn(name = "user_type", discriminatorType = DiscriminatorType.STRING, length = 20)`
+- Default Value: `@DiscriminatorValue("USER")`
+
+**Subclasses**:
+- `RegularUser` - `@DiscriminatorValue("USER")` - `src/main/java/multitier/trans/model/RegularUser.java`
+- `AdminUser` - `@DiscriminatorValue("ADMIN")` - `src/main/java/multitier/trans/model/AdminUser.java`
+
+**Database Structure**:
 ```sql
-CREATE TABLE reservations (
+CREATE TABLE users (
     id BIGSERIAL PRIMARY KEY,
-    user_id BIGINT NOT NULL,
-    route_id BIGINT NOT NULL,
-    passenger_name VARCHAR(100),
-    ...
-    CONSTRAINT fk_reservation_user FOREIGN KEY (user_id) 
-        REFERENCES users(id) ON DELETE RESTRICT
+    user_type VARCHAR(20) NOT NULL,  -- Discriminator column
+    username VARCHAR(50) NOT NULL UNIQUE,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    role VARCHAR(20) NOT NULL,
+    created_at TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP,
+    -- ... other fields
 );
 ```
 
----
+**How it works**:
+- All user types stored in single `users` table
+- `user_type` column distinguishes between subclasses
+- JPA automatically instantiates correct subclass based on discriminator value
+- No joins required - efficient queries
 
-## 2. Entity Model Layer (JPA Annotations)
+**Usage**:
+```java
+// Creating a regular user
+RegularUser user = new RegularUser("john", "john@example.com", "hashedPassword");
+userRepository.save(user);
+// → INSERT INTO users (user_type, username, email, ...) VALUES ('USER', 'john', ...)
 
-### Purpose
-Maps Java objects to database tables using JPA annotations.
+// Querying returns correct subclass
+User found = userRepository.findByUsername("john");
+// → Returns RegularUser instance (user_type = 'USER')
+```
 
-### Example: `Reservation` Entity
+### 3.2 Many-to-One Relationships
+
+**Pattern**: Child entity has foreign key to parent
+
+**Examples**:
+
+1. **Reservation → User**
+   - Location: `src/main/java/multitier/trans/model/Reservation.java`
+   - Annotation: `@ManyToOne` with `@JoinColumn(name = "user_id", nullable = false)`
+   - Usage: Many reservations belong to one user
+
+2. **Reservation → Route**
+   - Location: `src/main/java/multitier/trans/model/Reservation.java`
+   - Annotation: `@ManyToOne` with `@JoinColumn(name = "route_id", nullable = false)`
+   - Usage: Many reservations belong to one route
+
+3. **Route → Station (origin/destination)**
+   - Location: `src/main/java/multitier/trans/model/Route.java`
+   - Annotations: 
+     - `originStation` - `@ManyToOne` with `@JoinColumn(name = "origin_station_id", nullable = false)`
+     - `destinationStation` - `@ManyToOne` with `@JoinColumn(name = "destination_station_id", nullable = false)`
+   - Usage: Many routes can have same origin/destination stations
+
+4. **FarePolicy → Route**
+   - Location: `src/main/java/multitier/trans/model/FarePolicy.java`
+   - Annotation: `@ManyToOne` with `@JoinColumn(name = "route_id", nullable = false)`
+   - Usage: Many fare policies belong to one route
+
+5. **RouteTimetableEntry → RouteTimetable**
+   - Location: `src/main/java/multitier/trans/model/RouteTimetableEntry.java`
+   - Annotation: `@ManyToOne(fetch = FetchType.LAZY)` with `@JoinColumn(name = "timetable_id", nullable = false)`
+   - Usage: Many entries belong to one timetable
+
+**Database Structure**:
+```sql
+-- Child table has foreign key
+CREATE TABLE reservations (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL,      -- Foreign key
+    route_id BIGINT NOT NULL,     -- Foreign key
+    ...
+    CONSTRAINT fk_reservation_user FOREIGN KEY (user_id) REFERENCES users(id),
+    CONSTRAINT fk_reservation_route FOREIGN KEY (route_id) REFERENCES routes(id)
+);
+```
+
+### 3.3 One-to-Many Relationships: Component Entities
+
+**Pattern**: Parent entity manages collection of child entities
+
+**Example**: RouteTimetable → RouteTimetableEntry
+
+**Location**: `src/main/java/multitier/trans/model/RouteTimetable.java`
 
 ```java
-@Entity                          // Marks as JPA entity
-@Table(name = "reservations")    // Maps to database table
-public class Reservation {
-    
-    @Id                          // Primary key
-    @GeneratedValue(strategy = GenerationType.IDENTITY)  // Auto-increment
-    private Long id;
-    
-    @ManyToOne                   // Foreign key relationship
-    @JoinColumn(name = "user_id", nullable = false)
-    private User user;
-    
-    @ManyToOne
-    @JoinColumn(name = "route_id", nullable = false)
-    private Route route;
-    
-    @Column(name = "passenger_name")  // Maps to column
-    private String passengerName;
-    
-    @Embedded                    // Value object (TripTimeDetails)
-    @AttributeOverrides({...})
-    private TripTimeDetails tripDetails;
-}
+@OneToMany(
+    mappedBy = "timetable",           // Inverse side - references owning side
+    cascade = CascadeType.ALL,        // All operations cascade to children
+    orphanRemoval = true,             // Remove orphans when removed from collection
+    fetch = FetchType.LAZY           // Lazy loading (default for @OneToMany)
+)
+private List<RouteTimetableEntry> entries = new ArrayList<>();
 ```
 
-### Key Annotations Explained:
-- **`@Entity`**: Marks class as a JPA entity
-- **`@Table(name = "...")`**: Specifies table name
-- **`@Id`**: Primary key
-- **`@GeneratedValue`**: Auto-generation strategy
-- **`@ManyToOne`**: Many-to-one relationship (child side - has foreign key)
-- **`@OneToMany`**: One-to-many relationship (parent side - has collection)
-- **`@JoinColumn`**: Specifies foreign key column name
-- **`@Column`**: Column mapping
-- **`@Embedded`**: Value object embedding
-- **`@Enumerated`**: Maps Java enum to database column (STRING or ORDINAL)
-- **`@Inheritance`**: Entity inheritance strategy
-- **`@DiscriminatorColumn`**: Column that distinguishes entity subclasses
-- **`@DiscriminatorValue`**: Value used to identify entity subclass
+**Key Parameters**:
 
----
-
-## 3. Repository Layer (Spring Data JPA)
-
-### Purpose
-Provides data access without writing SQL.
-
-### Example: `ReservationRepository`
-
-```java
-@Repository
-public interface ReservationRepository extends JpaRepository<Reservation, Long> {
-    
-    // Spring Data JPA auto-generates SQL from method name
-    List<Reservation> findByRouteId(Long routeId);
-    // → SQL: SELECT * FROM reservations WHERE route_id = ?
-    
-    List<Reservation> findByUserId(Long userId);
-    // → SQL: SELECT * FROM reservations WHERE user_id = ?
-    
-    // Custom native query for database function
-    @Query(value = "SELECT * FROM calculate_reservation_fare(...)", nativeQuery = true)
-    Map<String, Object> calculateFare(...);
-}
-```
-
-### What `JpaRepository` Provides Automatically:
-- `save(entity)` → `INSERT` or `UPDATE`
-- `findById(id)` → `SELECT * FROM table WHERE id = ?`
-- `findAll()` → `SELECT * FROM table`
-- `delete(entity)` → `DELETE FROM table WHERE id = ?`
-- `count()` → `SELECT COUNT(*) FROM table`
-
----
-
-## 4. Service Layer (Business Logic)
-
-### Purpose
-Encapsulates business logic and orchestrates data operations.
-
-### Example: `ReservationServiceImpl`
-
-```java
-@Service
-public class ReservationServiceImpl implements ReservationService {
-    
-    @Autowired
-    private ReservationRepository reservationRepository;
-    
-    @Autowired
-    private UserService userService;
-    
-    @Override
-    public Reservation createReservation(CreateReservationRequest request) {
-        // 1. Get authenticated user
-        User user = userService.findByUsername(username);
-        
-        // 2. Load related entity
-        Route route = routeRepository.findById(request.getRouteId())
-            .orElseThrow(() -> new RuntimeException("Route not found"));
-        
-        // 3. Create entity object
-        Reservation reservation = new Reservation();
-        reservation.setUser(user);
-        reservation.setRoute(route);
-        // ... set other fields
-        
-        // 4. Save to database (Hibernate generates INSERT)
-        Reservation saved = reservationRepository.save(reservation);
-        
-        // 5. Refresh to get denormalized fields from triggers
-        return reservationRepository.findById(saved.getId()).orElseThrow(...);
-    }
-}
-```
-
----
-
-## 5. Complete Data Flow Example: Creating a Reservation
-
-### Step-by-Step Flow
-
-```
-1. HTTP POST /api/reservations
-   ↓
-2. ReservationController.createReservation(request)
-   ↓
-3. ReservationService.createReservation(request)
-   ↓
-4. Get authenticated user from SecurityContext
-   ↓
-5. Load Route entity: routeRepository.findById(routeId)
-   → Hibernate: SELECT * FROM routes WHERE id = ?
-   ↓
-6. Create Reservation object and set fields
-   ↓
-7. reservationRepository.save(reservation)
-   → Hibernate: INSERT INTO reservations (user_id, route_id, ...) VALUES (...)
-   ↓
-8. Database triggers fire:
-   - update_reservation_denormalized_fields() 
-     → Calculates base_fare, vat_amount, total_fare
-     → Copies origin_station_name, destination_station_name
-   - validate_seat_capacity()
-     → Checks seat availability
-   ↓
-9. Refresh entity: reservationRepository.findById(savedId)
-   → Hibernate: SELECT * FROM reservations WHERE id = ?
-   → Returns entity with denormalized fields populated
-   ↓
-10. Return Reservation object to controller
-    → Serialized to JSON and sent as HTTP response
-```
-
----
-
-## 6. Configuration
-
-### `application.properties`
-
-```properties
-# Database connection
-spring.datasource.url=jdbc:postgresql://localhost:5438/tms_db
-spring.datasource.username=tms_user
-spring.datasource.password=gi
-
-# JPA/Hibernate settings
-spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect
-spring.jpa.hibernate.ddl-auto=validate  # Validates schema, doesn't create tables
-spring.jpa.show-sql=false               # Set to true to see generated SQL
-
-# Connection pooling (HikariCP)
-spring.datasource.hikari.maximum-pool-size=10
-spring.datasource.hikari.minimum-idle=5
-```
-
-### Key Settings Explained:
-- **`ddl-auto=validate`**: Validates schema matches entities (doesn't auto-create)
-- **`show-sql=false`**: Set to `true` to see generated SQL in logs
-- **Connection Pooling**: HikariCP manages database connections efficiently
-
----
-
-## 7. Advanced Features
-
-### A. Relationship Mapping
-
-JPA provides annotations to map relationships between entities. The system uses both **`@ManyToOne`** and **`@OneToMany`** to represent bidirectional relationships.
-
-#### `@ManyToOne` (Many-to-One Relationship)
-
-Represents the "many" side of a relationship. Each entity has a reference to a single related entity.
-
-**Example: Reservation → User**
-```java
-@Entity
-@Table(name = "reservations")
-public class Reservation {
-    
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
-    private User user;  // Many reservations belong to one user
-}
-```
-
-**Example: RouteTimetableEntry → RouteTimetable**
-```java
-@Entity
-@Table(name = "route_timetable_entries")
-public class RouteTimetableEntry {
-    
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "timetable_id", nullable = false)
-    private RouteTimetable timetable;  // Many entries belong to one timetable
-}
-```
-
-**Key Points:**
-- **`@JoinColumn`**: Specifies the foreign key column name in the database
-- **`fetch = FetchType.LAZY`**: Related entity loaded only when accessed (performance optimization)
-- **Database**: Creates a foreign key column (`user_id`, `timetable_id`)
-
-#### `@OneToMany` (One-to-Many Relationship)
-
-Represents the "one" side of a relationship. One entity has a collection of related entities. When child entities are managed as components of the parent, this creates a **Component Entity Relationship**.
-
-**Component Entities** are child entities that:
-- Have no independent existence outside their parent
-- Are managed entirely by the parent entity
-- Are typically deleted when removed from the parent's collection
-- Represent parts/components of the parent entity
-
-**Example: RouteTimetable → RouteTimetableEntry (Component Entity Relationship)**
-```java
-@Entity
-@Table(name = "route_timetables")
-public class RouteTimetable {
-    
-    @OneToMany(mappedBy = "timetable", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<RouteTimetableEntry> entries = new ArrayList<>();
-    // One timetable has many entries
-}
-```
-
-**Key Parameters Explained:**
-
-1. **`mappedBy = "timetable"`**: 
-   - Indicates this is the **inverse side** (non-owning side) of the relationship
-   - The **owning side** (root entity) is `RouteTimetableEntry.timetable` - it has the `@JoinColumn`
-   - The foreign key is managed by the `@ManyToOne` side (`RouteTimetableEntry.timetable`)
-   - No `@JoinColumn` needed here (it's on the `@ManyToOne` side)
-   - **Root Entity Concept**: The entity with `@JoinColumn` is the "owning side" that manages the foreign key
+1. **`mappedBy = "timetable"`**:
+   - Indicates this is the **inverse side** (non-owning side)
+   - The **owning side** is `RouteTimetableEntry.timetable` (has `@JoinColumn`)
+   - Foreign key is managed by the `@ManyToOne` side
+   - No `@JoinColumn` needed here
 
 2. **`cascade = CascadeType.ALL`**:
-   - Operations on the parent (`RouteTimetable`) cascade to children (`RouteTimetableEntry`)
-   - When you save/update/delete a timetable, entries are automatically saved/updated/deleted
+   - Operations on parent cascade to children
+   - Save/update/delete timetable automatically saves/updates/deletes entries
    - Prevents manual management of child entities
-   - **CascadeType Options**:
-     - `CascadeType.ALL`: All operations cascade (PERSIST, MERGE, REMOVE, REFRESH, DETACH)
-     - `CascadeType.PERSIST`: Save operations cascade
-     - `CascadeType.MERGE`: Update operations cascade
-     - `CascadeType.REMOVE`: Delete operations cascade
-     - `CascadeType.REFRESH`: Refresh operations cascade
-     - `CascadeType.DETACH`: Detach operations cascade
 
 3. **`orphanRemoval = true`**:
-   - If an entry is removed from the collection, it's automatically deleted from the database
-   - Ensures no orphaned entries exist without a parent timetable
-   - **Difference from CascadeType.REMOVE**:
-     - `CascadeType.REMOVE`: Deletes children when parent is deleted
-     - `orphanRemoval = true`: Deletes children when removed from collection (even if parent still exists)
+   - Removing entry from collection automatically deletes it from database
+   - Ensures no orphaned entries exist without a parent
+   - Different from `CascadeType.REMOVE` (which only applies when parent is deleted)
 
-4. **`fetch` (implicit or explicit)**:
-   - **Default for `@OneToMany`**: `FetchType.LAZY` (lazy loading)
-   - Related entities loaded only when accessed (performance optimization)
-   - **FetchType Options**:
-     - `FetchType.LAZY`: Load on demand (default for `@OneToMany`)
-     - `FetchType.EAGER`: Load immediately (default for `@ManyToOne`, `@OneToOne`)
-   - **Best Practice**: Use `LAZY` for collections to avoid N+1 query problems
+4. **`fetch = FetchType.LAZY`** (default):
+   - Related entities loaded only when accessed
+   - Performance optimization - avoids loading large collections unnecessarily
 
-**Bidirectional Relationship Pattern:**
+**Component Entity**: RouteTimetableEntry
+- Location: `src/main/java/multitier/trans/model/RouteTimetableEntry.java`
+- Has own identity (`@Id`) and table
+- Managed as component via cascade and orphanRemoval
+- Can be queried independently if needed
 
-```java
-// Parent side (One) - INVERSE SIDE (non-owning)
-@Entity
-public class RouteTimetable {
-    @OneToMany(mappedBy = "timetable", cascade = CascadeType.ALL, orphanRemoval = true)
-    // mappedBy indicates this is the inverse side
-    // No @JoinColumn here - foreign key is on the child side
-    private List<RouteTimetableEntry> entries = new ArrayList<>();
-}
-
-// Child side (Many) - OWNING SIDE (root entity for this relationship)
-@Entity
-public class RouteTimetableEntry {
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "timetable_id", nullable = false)
-    // @JoinColumn makes this the owning side - manages the foreign key
-    private RouteTimetable timetable;
-}
-```
-
-**Owning Side vs Inverse Side (Root Entity):**
-
-- **Owning Side** (`RouteTimetableEntry`):
-  - Has the `@JoinColumn` annotation
-  - Manages the foreign key column in the database
-  - Changes to the relationship are tracked here
-  - This is the "root entity" for the relationship mapping
-
-- **Inverse Side** (`RouteTimetable`):
-  - Has `mappedBy` attribute
-  - References the owning side's field name
-  - Does NOT manage the foreign key
-  - Changes here don't affect the database relationship
-
-**Database Schema:**
+**Database Structure**:
 ```sql
 -- Parent table
 CREATE TABLE route_timetables (
@@ -379,9 +287,9 @@ CREATE TABLE route_timetable_entries (
 );
 ```
 
-**Usage Example:**
+**Usage Example**:
 ```java
-// Create a timetable with entries
+// Create timetable with entries
 RouteTimetable timetable = new RouteTimetable();
 timetable.setName("Weekday Schedule");
 
@@ -391,611 +299,554 @@ mondayEntry.setServiceDay(DayOfWeek.MONDAY);
 mondayEntry.setDepartureTime(LocalTime.of(8, 0));
 timetable.addEntry(mondayEntry);  // Sets bidirectional relationship
 
-RouteTimetableEntry tuesdayEntry = new RouteTimetableEntry();
-tuesdayEntry.setServiceDay(DayOfWeek.TUESDAY);
-timetable.addEntry(tuesdayEntry);
-
 // Save timetable - entries are automatically saved (cascade)
 timetableRepository.save(timetable);
 // → INSERT INTO route_timetables (...) VALUES (...)
 // → INSERT INTO route_timetable_entries (timetable_id, ...) VALUES (1, ...)
-// → INSERT INTO route_timetable_entries (timetable_id, ...) VALUES (1, ...)
 ```
 
-**Complete Configuration Example:**
+---
 
-```java
-@Entity
-@Table(name = "route_timetables")
-public class RouteTimetable {
-    
-    // Root entity relationship configuration
-    @OneToMany(
-        mappedBy = "timetable",           // Inverse side - references owning side
-        cascade = CascadeType.ALL,        // All operations cascade to children
-        orphanRemoval = true,             // Remove orphans when removed from collection
-        fetch = FetchType.LAZY           // Lazy loading (default, but explicit is clearer)
-    )
-    private List<RouteTimetableEntry> entries = new ArrayList<>();
-    
-    // Helper method to maintain bidirectional relationship
-    public void addEntry(RouteTimetableEntry entry) {
-        entries.add(entry);
-        entry.setTimetable(this);  // Set owning side
-    }
-    
-    public void removeEntry(RouteTimetableEntry entry) {
-        entries.remove(entry);
-        entry.setTimetable(null);  // Clear owning side
-        // With orphanRemoval = true, entry will be deleted from DB
-    }
-}
-```
+## 4. Value Objects
 
-**When to Use This Pattern:**
+### 4.1 Embeddable Value Objects
 
-✅ **Use `cascade = CascadeType.ALL` + `orphanRemoval = true` when:**
-- Child entities have no independent existence (composition relationship)
-- Children should be managed entirely by the parent
-- Example: `RouteTimetableEntry` only exists within a `RouteTimetable`
+**Pattern**: `@Embeddable` / `@Embedded` for value objects stored in same table
 
-✅ **Use `mappedBy` when:**
-- You want a bidirectional relationship
-- The child entity should own the foreign key
-- You want to avoid duplicate foreign key columns
+**Example**: TripTimeDetails
 
-✅ **Use `fetch = FetchType.LAZY` when:**
-- Collections might be large
-- You don't always need to load children
-- Performance is important
+**Embeddable Class**:
+- Location: `src/main/java/multitier/trans/model/TripTimeDetails.java`
+- Annotation: `@Embeddable`
+- Fields: `departureTime`, `arrivalTime` (both `LocalDateTime`)
 
-**Benefits:**
-- **Automatic Management**: Cascade operations handle child entities automatically
-- **Data Integrity**: Orphan removal prevents orphaned records
-- **Bidirectional Navigation**: Can navigate from parent to children and vice versa
-- **Lazy Loading**: Related entities loaded only when needed (performance)
-- **Root Entity Control**: Parent entity controls the lifecycle of children
+**Entity using @Embedded**:
+- Location: `src/main/java/multitier/trans/model/Reservation.java`
+- Field: `tripDetails` - `@Embedded` with `@AttributeOverrides`
+- Attribute Overrides:
+  - `departureTime` → `departure_time` column
+  - `arrivalTime` → `arrival_time` column
 
-### B. Denormalization
-- `reservations` table stores cached values (`base_fare`, `vat_amount`, `origin_station_name`)
-- Populated by database triggers for performance
-- Avoids joins when reading reservations
-
-### C. Value Objects vs Component Entities
-
-The system uses two different patterns for grouping related data:
-
-#### Value Objects (`@Embedded` / `@Embeddable`)
-
-Value objects are **embedded** into the parent entity's table. They don't have their own table or identity.
-
-```java
-// Value Object - @Embeddable
-@Embeddable
-public class TripTimeDetails {
-    private LocalDateTime departureTime;
-    private LocalDateTime arrivalTime;
-}
-
-// Used in parent entity - @Embedded
-@Entity
-@Table(name = "reservations")
-public class Reservation {
-    @Embedded
-    @AttributeOverrides({
-        @AttributeOverride(name = "departureTime", column = @Column(name = "departure_time")),
-        @AttributeOverride(name = "arrivalTime", column = @Column(name = "arrival_time"))
-    })
-    private TripTimeDetails tripDetails;  // Stored in same table, different columns
-}
-```
-
-**Database Storage:**
+**Database Structure**:
 ```sql
--- Value object fields stored in parent table
 CREATE TABLE reservations (
     id BIGSERIAL PRIMARY KEY,
+    ...
     departure_time TIMESTAMP NOT NULL,  -- From TripTimeDetails
-    arrival_time TIMESTAMP NOT NULL,    -- From TripTimeDetails
+    arrival_time TIMESTAMP NOT NULL,     -- From TripTimeDetails
     ...
 );
 ```
 
-**Characteristics:**
-- ✅ Stored in the same table as parent
+**Characteristics**:
+- ✅ Stored in same table as parent (no separate table)
 - ✅ No separate identity (no `@Id`)
 - ✅ Cannot be shared between entities
 - ✅ Simple value grouping
 
-#### Component Entities (`@OneToMany`)
-
-Component entities are **separate entities** with their own table and identity, but are managed as components of the parent.
-
+**Usage**:
 ```java
-// Parent Entity
-@Entity
-@Table(name = "route_timetables")
-public class RouteTimetable {
-    @OneToMany(mappedBy = "timetable", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<RouteTimetableEntry> entries = new ArrayList<>();
-    // Component entities - managed as parts of the timetable
-}
-
-// Component Entity - separate entity with own identity
-@Entity
-@Table(name = "route_timetable_entries")
-public class RouteTimetableEntry {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;  // Has own identity
-    
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "timetable_id", nullable = false)
-    private RouteTimetable timetable;
-    
-    private DayOfWeek serviceDay;
-    private LocalTime departureTime;
-    // ...
-}
-```
-
-**Database Storage:**
-```sql
--- Parent table
-CREATE TABLE route_timetables (
-    id BIGSERIAL PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    ...
+Reservation reservation = new Reservation();
+TripTimeDetails tripDetails = new TripTimeDetails(
+    LocalDateTime.of(2025, 1, 15, 10, 0),  // departure
+    LocalDateTime.of(2025, 1, 15, 11, 30)  // arrival
 );
-
--- Component entity table (separate table)
-CREATE TABLE route_timetable_entries (
-    id BIGSERIAL PRIMARY KEY,  -- Has own identity
-    timetable_id BIGINT NOT NULL,  -- Foreign key to parent
-    service_day VARCHAR(10) NOT NULL,
-    departure_time TIME NOT NULL,
-    ...
-    CONSTRAINT fk_entry_timetable FOREIGN KEY (timetable_id) 
-        REFERENCES route_timetables(id) ON DELETE CASCADE
-);
+reservation.setTripDetails(tripDetails);
+// → Fields stored as columns in reservations table
 ```
 
-**Characteristics:**
-- ✅ Stored in separate table
-- ✅ Has own identity (`@Id`)
-- ✅ Can be queried independently (if needed)
-- ✅ Managed as component via cascade and orphanRemoval
+### 4.2 Enums with @Enumerated
 
-#### Comparison: Value Objects vs Component Entities
+**Pattern**: Java enums stored as strings in database
 
-| Aspect | Value Objects (`@Embedded`) | Component Entities (`@OneToMany`) |
-|--------|----------------------------|-----------------------------------|
-| **Storage** | Same table as parent | Separate table |
-| **Identity** | No `@Id` | Has `@Id` |
-| **Query** | Cannot query independently | Can query independently |
-| **Relationship** | Embedded columns | Foreign key relationship |
-| **Use Case** | Simple value grouping | Complex child entities |
-| **Example** | `TripTimeDetails` in `Reservation` | `RouteTimetableEntry` in `RouteTimetable` |
+**Enums using @Enumerated**:
 
-**When to Use Each:**
+1. **PassengerCategory**
+   - Location: `src/main/java/multitier/trans/model/enums/PassengerCategory.java`
+   - Values: `ADULT`, `CHILD`, `SENIOR`, `STUDENT`
+   - Used in: `FarePolicy`, `Reservation`, `FarePolicyHistory`
+   - Annotation: `@Enumerated(EnumType.STRING)`
 
-- **Use Value Objects (`@Embedded`)** when:
-  - Data is simple and doesn't need independent identity
-  - Data is always accessed with the parent
-  - No need to query children separately
-  - Example: Time details, address, money amount
+2. **VehicleClass**
+   - Location: `src/main/java/multitier/trans/model/enums/VehicleClass.java`
+   - Values: `STANDARD`, `PREMIUM`, `LUXURY`
+   - Used in: `FarePolicy`, `Reservation`, `FarePolicyHistory`
+   - Annotation: `@Enumerated(EnumType.STRING)`
 
-- **Use Component Entities (`@OneToMany`)** when:
-  - Children have complex structure
-  - Children might need to be queried independently
-  - Children have relationships to other entities
-  - Need to maintain referential integrity
-  - Example: Timetable entries, order items, reservation details
+3. **DayOfWeek** (Java standard enum)
+   - Used in: `RouteTimetableEntry.serviceDay`
+   - Annotation: `@Enumerated(EnumType.STRING)`
 
-### D. Enums (Type-Safe Constants)
-
-The system uses **Java enums** for type-safe constants that map to database columns:
-
-**Enum Definitions:**
-```java
-// PassengerCategory.java
-public enum PassengerCategory {
-    ADULT,
-    CHILD,
-    SENIOR,
-    STUDENT
-}
-
-// VehicleClass.java
-public enum VehicleClass {
-    STANDARD,
-    COACH,
-    MINI_BUS,
-    DOUBLE_DECKER
-}
-```
-
-**Usage in Entities:**
-```java
-@Entity
-@Table(name = "reservations")
-public class Reservation {
-    
-    @NotNull
-    @Enumerated(EnumType.STRING)  // Stores "ADULT" in DB, not 0
-    @Column(name = "passenger_category", nullable = false)
-    private PassengerCategory passengerCategory;
-    
-    @NotNull
-    @Enumerated(EnumType.STRING)  // Stores "STANDARD" in DB, not 0
-    @Column(name = "vehicle_class", nullable = false)
-    private VehicleClass vehicleClass;
-}
-```
-
-**How `@Enumerated(EnumType.STRING)` Works:**
-
-1. **Database Storage**: Enum values stored as readable strings (`"ADULT"`, `"STANDARD"`) instead of numbers
-2. **Automatic Conversion**: JPA automatically converts between Java enum and database string
-3. **Type Safety**: Compiler ensures only valid enum values are used
-4. **JSON Serialization**: Spring automatically converts JSON strings to enum values in API requests
-
-**Database Schema:**
+**Database Storage**:
 ```sql
--- Enum values stored as VARCHAR in database
 CREATE TABLE reservations (
     ...
-    passenger_category VARCHAR(20) NOT NULL,
-    vehicle_class VARCHAR(20) NOT NULL,
+    passenger_category VARCHAR(20) NOT NULL,  -- Stores "ADULT", "CHILD", etc.
+    vehicle_class VARCHAR(20) NOT NULL,       -- Stores "STANDARD", "PREMIUM", etc.
     ...
-    CONSTRAINT fk_reservation_category FOREIGN KEY (passenger_category) 
-        REFERENCES passenger_categories(category) ON DELETE RESTRICT,
-    CONSTRAINT fk_reservation_vehicle_class FOREIGN KEY (vehicle_class) 
-        REFERENCES vehicle_classes(class) ON DELETE RESTRICT
 );
 ```
 
-**Benefits:**
-- **Type Safety**: Compile-time validation prevents invalid values
-- **Readability**: Database values are human-readable strings
-- **Refactoring**: IDE can safely rename enum values
-- **API Integration**: Automatic JSON conversion in REST endpoints
-- **Database Integrity**: Foreign key constraints ensure referential integrity
+**How it works**:
+- Enum values stored as readable strings (`"ADULT"`, `"STANDARD"`) instead of numbers
+- JPA automatically converts between Java enum and database string
+- Type safety: compiler ensures only valid enum values are used
+- JSON serialization: Spring automatically converts JSON strings to enum values
 
-**Example Flow:**
+### 4.3 Enums with @Convert
+
+**Pattern**: Java enums with custom AttributeConverter for type-safe conversion
+
+**Enums using @Convert**:
+
+1. **ReservationStatus**
+   - Location: `src/main/java/multitier/trans/model/enums/ReservationStatus.java`
+   - Values: `CONFIRMED`, `CANCELLED`, `PENDING`
+   - Converter: `ReservationStatusConverter` - `src/main/java/multitier/trans/model/converter/ReservationStatusConverter.java`
+   - Used in: `Reservation.status` field
+
+2. **PolicyStatus**
+   - Location: `src/main/java/multitier/trans/model/enums/PolicyStatus.java`
+   - Values: `ACTIVE`, `INACTIVE`
+   - Converter: `PolicyStatusConverter` - `src/main/java/multitier/trans/model/converter/PolicyStatusConverter.java`
+   - Used in: `FarePolicy.status` field
+
+3. **StationStatus**
+   - Location: `src/main/java/multitier/trans/model/enums/StationStatus.java`
+   - Values: `ACTIVE`, `CLOSED`, `MAINTENANCE`
+   - Converter: `StationStatusConverter` - `src/main/java/multitier/trans/model/converter/StationStatusConverter.java`
+   - Used in: `Station.status` field
+
+4. **TimetableStatus**
+   - Location: `src/main/java/multitier/trans/model/enums/TimetableStatus.java`
+   - Values: `ACTIVE`, `INACTIVE`
+   - Converter: `TimetableStatusConverter` - `src/main/java/multitier/trans/model/converter/TimetableStatusConverter.java`
+   - Used in: `RouteTimetable.status` field
+
+**AttributeConverter Implementation**:
 ```java
-// 1. Client sends JSON
-{
-  "passengerCategory": "ADULT",
-  "vehicleClass": "STANDARD"
-}
-
-// 2. Spring converts JSON string → Enum
-CreateReservationRequest.getPassengerCategory() → PassengerCategory.ADULT
-
-// 3. Entity stores enum
-reservation.setPassengerCategory(PassengerCategory.ADULT);
-
-// 4. JPA saves as string
-// → INSERT INTO reservations (passenger_category, ...) 
-//   VALUES ('ADULT', ...)
-```
-
-### E. Entity Inheritance (JPA Inheritance)
-
-The system uses **JPA SINGLE_TABLE inheritance** for the User entity hierarchy:
-
-```java
-// Base User entity
-@Entity
-@Table(name = "users")
-@Inheritance(strategy = InheritanceType.SINGLE_TABLE)
-@DiscriminatorColumn(name = "user_type", discriminatorType = DiscriminatorType.STRING)
-@DiscriminatorValue("USER")
-public class User {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+@Converter(autoApply = false)
+public class ReservationStatusConverter implements AttributeConverter<ReservationStatus, String> {
     
-    private String username;
-    private String email;
-    private String passwordHash;
-    private String role;  // Determined by entity type
-    
-    // Common fields for all user types
-}
-
-// Regular User subclass
-@Entity
-@DiscriminatorValue("USER")
-public class RegularUser extends User {
     @Override
-    public String getRole() {
-        return "USER";
+    public String convertToDatabaseColumn(ReservationStatus status) {
+        if (status == null) return null;
+        return status.name();  // "CONFIRMED", "CANCELLED", "PENDING"
     }
-}
-
-// Admin User subclass
-@Entity
-@DiscriminatorValue("ADMIN")
-public class AdminUser extends User {
+    
     @Override
-    public String getRole() {
-        return "ADMIN";
+    public ReservationStatus convertToEntityAttribute(String dbData) {
+        if (dbData == null || dbData.isEmpty()) return null;
+        try {
+            return ReservationStatus.valueOf(dbData);
+        } catch (IllegalArgumentException e) {
+            return null;  // Handle legacy/invalid data gracefully
+        }
     }
 }
 ```
 
-**How SINGLE_TABLE Inheritance Works:**
+**Usage in Entity**:
+```java
+@Entity
+public class Reservation {
+    @Convert(converter = ReservationStatusConverter.class)
+    @Column(nullable = false)
+    private ReservationStatus status;  // Type-safe enum
+}
+```
 
-1. **Single Table**: All user types stored in one `users` table
-2. **Discriminator Column**: `user_type` column distinguishes between subclasses
-3. **No Joins**: Efficient queries - no table joins needed
-4. **Polymorphism**: Can work with `User` base class or specific subclasses
+**Benefits of @Convert vs @Enumerated**:
+- Same type safety and readability as `@Enumerated`
+- More control over conversion logic (error handling, legacy data)
+- Can be applied selectively (not auto-applied)
+- Consistent pattern for all status fields
 
-**Database Schema:**
-```sql
-CREATE TABLE users (
-    id BIGSERIAL PRIMARY KEY,
-    user_type VARCHAR(20) NOT NULL DEFAULT 'USER',  -- Discriminator column
-    username VARCHAR(50) NOT NULL UNIQUE,
-    email VARCHAR(255) NOT NULL UNIQUE,
-    password_hash VARCHAR(255) NOT NULL,
-    role VARCHAR(20) NOT NULL DEFAULT 'USER',
-    -- ... other common fields
+---
+
+## 5. Repository Layer (Spring Data JPA)
+
+### 5.1 Repository Pattern
+
+**Approach**: Spring Data JPA interfaces extending `JpaRepository`
+
+**All Repositories** (13 total):
+- `FarePolicyHistoryRepository` - `JpaRepository<FarePolicyHistory, Long>`
+- `FarePolicyRepository` - `JpaRepository<FarePolicy, Long>`
+- `ReservationRepository` - `JpaRepository<Reservation, Long>`
+- `ReservationStatusHistoryRepository` - `JpaRepository<ReservationStatusHistory, Long>`
+- `RevenueSummaryRepository` - `JpaRepository<RevenueSummary, Long>`
+- `RouteAvailabilityRepository` - `JpaRepository<RouteAvailability, Long>`
+- `RouteRepository` - `JpaRepository<Route, Long>`
+- `RouteStatisticsRepository` - `JpaRepository<RouteStatistics, Long>`
+- `RouteTimetableEntryRepository` - `JpaRepository<RouteTimetableEntry, Long>`
+- `RouteTimetableRepository` - `JpaRepository<RouteTimetable, Long>`
+- `StationRepository` - `JpaRepository<Station, Long>`
+- `UserRepository` - `JpaRepository<User, Long>`
+- `VatRateRepository` - `JpaRepository<VatRate, Long>`
+
+**Automatic CRUD Operations**:
+- `save(entity)` → `INSERT` or `UPDATE`
+- `findById(id)` → `SELECT * FROM table WHERE id = ?`
+- `findAll()` → `SELECT * FROM table`
+- `delete(entity)` → `DELETE FROM table WHERE id = ?`
+- `count()` → `SELECT COUNT(*) FROM table`
+
+### 5.2 Custom Query Methods
+
+#### Method Name Derivation
+
+**Pattern**: `findByPropertyName()` - Spring Data JPA generates SQL automatically
+
+**Examples**:
+
+1. **StationRepository**
+   - `findByName(String name)` → `SELECT * FROM stations WHERE name = ?`
+
+2. **UserRepository**
+   - `findByUsername(String username)` → `SELECT * FROM users WHERE username = ?`
+   - `findByEmail(String email)` → `SELECT * FROM users WHERE email = ?`
+
+3. **ReservationRepository**
+   - `findByRouteId(Long routeId)` → `SELECT * FROM reservations WHERE route_id = ?`
+   - `findByUserId(Long userId)` → `SELECT * FROM reservations WHERE user_id = ?`
+   - `findByPassengerName(String passengerName)` → `SELECT * FROM reservations WHERE passenger_name = ?`
+
+4. **RouteTimetableRepository**
+   - `findByRouteId(Long routeId)` → `SELECT * FROM route_timetables WHERE route_id = ?`
+   - `findByIdAndRouteId(Long id, Long routeId)` → `SELECT * FROM route_timetables WHERE id = ? AND route_id = ?`
+
+5. **FarePolicyRepository**
+   - `findByRouteIdAndPassengerCategoryAndVehicleClass(...)` → Complex query with multiple conditions
+
+6. **RevenueSummaryRepository**
+   - `findBySummaryDate(LocalDate summaryDate)` → `SELECT * FROM revenue_summary WHERE summary_date = ?`
+   - `findBySummaryDateBetween(LocalDate startDate, LocalDate endDate)` → Date range query
+
+7. **FarePolicyHistoryRepository**
+   - `findByFarePolicyIdOrderByChangedAtDesc(Long farePolicyId)` → Ordered query
+   - `findByRouteIdOrderByChangedAtDesc(Long routeId)` → Ordered query
+
+**How it works**: Spring Data JPA analyzes method names and generates SQL queries automatically. Method naming conventions:
+- `findBy` + PropertyName → WHERE property = ?
+- `findBy` + Property1 + `And` + Property2 → WHERE property1 = ? AND property2 = ?
+- `findBy` + Property + `Between` → WHERE property BETWEEN ? AND ?
+- `OrderBy` + Property + `Desc` → ORDER BY property DESC
+
+#### Custom JPQL Queries
+
+**Pattern**: `@Query` annotation with JPQL (Java Persistence Query Language)
+
+**Examples**:
+
+1. **FarePolicyRepository**
+   - `findActiveFarePolicy()` - JPQL query to find active fare policy for route, category, class, and date
+   - `existsOverlappingActivePolicy()` - JPQL query to check for overlapping active policies
+
+2. **VatRateRepository**
+   - `findActiveVatRateForDate()` - JPQL query to find active VAT rate for a specific date
+   - `existsOverlappingVatRate()` - JPQL query to check for overlapping VAT rates
+
+**JPQL Example**:
+```java
+@Query("SELECT f FROM FarePolicy f WHERE f.route.id = :routeId " +
+       "AND f.passengerCategory = :category " +
+       "AND f.vehicleClass = :vehicleClass " +
+       "AND f.status = :status " +
+       "AND f.effectiveFrom <= :date " +
+       "AND (f.effectiveTo IS NULL OR f.effectiveTo > :date) " +
+       "ORDER BY f.effectiveFrom DESC")
+Optional<FarePolicy> findActiveFarePolicy(
+    @Param("routeId") Long routeId,
+    @Param("category") PassengerCategory category,
+    @Param("vehicleClass") VehicleClass vehicleClass,
+    @Param("status") PolicyStatus status,
+    @Param("date") LocalDate date
 );
 ```
 
-**Usage Example:**
-```java
-// Creating a regular user
-RegularUser user = new RegularUser("john", "john@example.com", "hashedPassword");
-userRepository.save(user);
-// → INSERT INTO users (user_type, username, email, ...) 
-//   VALUES ('USER', 'john', 'john@example.com', ...)
+**Benefits**:
+- Type-safe queries (uses entity names and properties, not table/column names)
+- Compile-time validation
+- Database-agnostic (works with any JPA-compliant database)
 
-// Creating an admin user
-AdminUser admin = new AdminUser("admin", "admin@example.com", "hashedPassword");
-userRepository.save(admin);
-// → INSERT INTO users (user_type, username, email, ...) 
-//   VALUES ('ADMIN', 'admin', 'admin@example.com', ...)
+---
 
-// Querying - JPA automatically filters by discriminator
-User found = userRepository.findByUsername("admin");
-// → Returns AdminUser instance (user_type = 'ADMIN')
+## 6. Service Layer (Business Logic)
+
+### 6.1 Service Layer Responsibilities
+
+**Services** (10 total):
+- `ReservationServiceImpl` - Reservation creation, cancellation, status tracking
+- `RouteServiceImpl` - Route creation, deletion, statistics management
+- `StationServiceImpl` - Station updates, validation, denormalized field updates
+- `UserServiceImpl` - User registration, authentication
+- `TimetableServiceImpl` - Route timetable management
+- `FarePolicyServiceImpl` - Fare policy creation, validation
+- `VatRateServiceImpl` - VAT rate creation, validation
+- `SeatAvailabilityServiceImpl` - Seat availability calculation
+- `FinancialServiceImpl` - Financial summaries and revenue calculation
+- `AnalyticsServiceImpl` - Analytics and reporting
+
+### 6.2 Validation and Integrity Checks
+
+**All validation moved from database triggers to service layer**:
+
+1. **FarePolicyService**
+   - Validates date ranges (effectiveFrom < effectiveTo)
+   - Checks for overlapping active policies using `existsOverlappingActivePolicy()`
+   - Location: `src/main/java/multitier/trans/service/FarePolicyServiceImpl.java`
+
+2. **VatRateService**
+   - Validates date ranges (effectiveFrom < effectiveTo)
+   - Checks for overlapping rates using `existsOverlappingVatRate()`
+   - Location: `src/main/java/multitier/trans/service/VatRateServiceImpl.java`
+
+3. **StationService**
+   - Validates status changes (prevents closing if active routes exist)
+   - Prevents deletion if station is used in routes
+   - Updates denormalized station names in reservations when station name changes
+   - Location: `src/main/java/multitier/trans/service/StationServiceImpl.java`
+
+4. **RouteService**
+   - Prevents deletion if route has existing reservations
+   - Creates route statistics automatically when route is created
+   - Location: `src/main/java/multitier/trans/service/RouteServiceImpl.java`
+
+### 6.3 Denormalization in Service Layer
+
+**Pattern**: Service layer calculates and sets denormalized fields
+
+**Example**: Reservation Denormalization
+
+**Location**: `src/main/java/multitier/trans/service/ReservationServiceImpl.java`
+
+**Method**: `updateDenormalizedFields(Reservation reservation, Route route)`
+
+**What it does**:
+1. Sets station names from route:
+   - `reservation.setOriginStationName(route.getOriginStation().getName())`
+   - `reservation.setDestinationStationName(route.getDestinationStation().getName())`
+
+2. Calculates fare using `FareCalculationService`:
+   - Gets base fare, VAT amount, total fare
+   - Sets `baseFare`, `vatAmount`, `totalFare` fields
+
+**Called when**:
+- Creating a new reservation (before saving)
+- Updating a reservation (if route changes)
+
+**Benefits**:
+- No database triggers needed
+- Business logic in Java (testable, maintainable)
+- Type-safe calculations
+
+### 6.4 History Tracking
+
+**Pattern**: Service layer and Entity Listeners work together
+
+**FarePolicy History**:
+- Automatic via `FarePolicyHistoryListener` (`@PostPersist`, `@PostUpdate`, `@PreRemove`)
+- Location: `src/main/java/multitier/trans/model/FarePolicyHistoryListener.java`
+
+**Reservation Status History**:
+- Manual tracking in `ReservationServiceImpl.recordStatusHistory()`
+- Records old status, new status, change reason
+- Location: `src/main/java/multitier/trans/service/ReservationServiceImpl.java`
+
+**Why manual for reservations**:
+- `@PostUpdate` cannot access old values
+- Service layer has access to both old and new status values
+- More control over what gets recorded
+
+---
+
+## 7. Data Initialization
+
+### 7.1 Sample Data Initialization
+
+**Approach**: `@PostConstruct` in configuration class
+
+**Location**: `src/main/java/multitier/trans/config/DataInitializer.java`
+
+**How it works**:
+- `@PostConstruct` method runs after Spring context is fully loaded
+- Checks if tables are empty before inserting sample data
+- Idempotent: safe to run multiple times
+
+**Initialization methods**:
+- `initializeStations()` - Creates sample stations
+- `initializeRoutes()` - Creates sample routes
+- `initializeTimetables()` - Creates sample route timetables and entries
+- `initializeVatRates()` - Creates default VAT rate
+- `initializeFarePolicies()` - Creates sample fare policies
+- `initializeReservations()` - Creates sample reservations
+
+**Configuration**:
+```properties
+app.data.initialize=true  # Set to false to disable sample data
 ```
 
-**Benefits:**
-- **Type Safety**: `AdminUser` and `RegularUser` are distinct types
-- **Polymorphism**: Can work with `User` base class
-- **Extensibility**: Easy to add new user types (e.g., `ManagerUser`)
-- **Performance**: Single table, no joins required
-- **Backward Compatible**: Existing code continues to work
+**Benefits**:
+- No SQL scripts needed
+- Type-safe data creation (uses JPA entities)
+- Conditional initialization (only if tables are empty)
+- Easy to disable for production
 
-### F. Automatic SQL Generation
-- Spring Data JPA generates SQL from method names
-- `findByUserId(Long id)` → `SELECT * FROM reservations WHERE user_id = ?`
+---
 
-### G. Database Functions
-- Can call PostgreSQL functions via `@Query(nativeQuery = true)`
-- Example: `calculate_reservation_fare()` function
+## 8. Complete Data Flow Example
 
-### H. Database Indexes
+### Creating a Reservation
 
-**Indexes** are database structures that improve query performance by creating a sorted data structure that allows fast lookups. They're essential for optimizing frequently queried columns.
-
-#### What Are Indexes?
-
-An index is like a book's index - instead of scanning every page, the database can quickly jump to the relevant data. Without indexes, queries must perform **full table scans**, which become slow as data grows.
-
-#### Types of Indexes in the System
-
-**1. Single Column Indexes**
-
-Indexes on frequently queried individual columns:
-
-```sql
--- User authentication lookups
-CREATE INDEX idx_users_username ON users(username);
-CREATE INDEX idx_users_email ON users(email);
-
--- User role filtering
-CREATE INDEX idx_users_role ON users(role);
-CREATE INDEX idx_users_type ON users(user_type);
-
--- Station lookups
-CREATE INDEX idx_stations_name ON stations(name);
-CREATE INDEX idx_stations_status ON stations(status);
-
--- Route filtering
-CREATE INDEX idx_routes_origin ON routes(origin_station_id);
-CREATE INDEX idx_routes_destination ON routes(destination_station_id);
-CREATE INDEX idx_routes_status ON routes(status);
-
--- Reservation queries
-CREATE INDEX idx_reservations_user ON reservations(user_id);
-CREATE INDEX idx_reservations_route ON reservations(route_id);
-CREATE INDEX idx_reservations_status ON reservations(status);
-CREATE INDEX idx_reservations_departure_time ON reservations(departure_time);
 ```
-
-**2. Composite Indexes (Multiple Columns)**
-
-Indexes on multiple columns used together in queries:
-
-```sql
--- Route origin-destination lookups
-CREATE INDEX idx_routes_origin_destination ON routes(origin_station_id, destination_station_id);
-
--- User reservations by status
-CREATE INDEX idx_reservations_user_status ON reservations(user_id, status);
-
--- Route reservations by status
-CREATE INDEX idx_reservations_route_status ON reservations(route_id, status);
-
--- Fare policy lookups (multiple criteria)
-CREATE INDEX idx_fare_policies_lookup ON fare_policies(
-    route_id, 
-    passenger_category, 
-    vehicle_class, 
-    status, 
-    effective_from, 
-    effective_to
-);
-
--- Route availability queries
-CREATE INDEX idx_route_availability_route_departure ON route_availability(route_id, departure_time);
-```
-
-**3. Partial Indexes (Conditional)**
-
-Indexes that only include rows matching a condition:
-
-```sql
--- Only index available routes (WHERE clause)
-CREATE INDEX idx_route_availability_available 
-    ON route_availability(available_seats) 
-    WHERE available_seats > 0;
-```
-
-This index only includes routes with available seats, making "find available routes" queries faster.
-
-**4. Unique Indexes**
-
-Ensure uniqueness while providing fast lookups:
-
-```sql
--- Ensure only one active fare policy per route/category/class combination
-CREATE UNIQUE INDEX idx_fare_policies_active_unique 
-    ON fare_policies(route_id, passenger_category, vehicle_class) 
-    WHERE status = 'ACTIVE' AND effective_to IS NULL;
-```
-
-#### How Indexes Improve Performance
-
-**Example: Finding User Reservations**
-
-```sql
--- Query: Find all reservations for user_id = 123
-SELECT * FROM reservations WHERE user_id = 123;
-```
-
-**Without Index:**
-- Database scans **every row** in `reservations` table
-- Time complexity: O(n) - linear scan
-- With 1 million reservations: checks all 1 million rows
-
-**With Index (`idx_reservations_user`):**
-- Database uses index to jump directly to user_id = 123 entries
-- Time complexity: O(log n) - binary search
-- With 1 million reservations: checks ~20 rows (log₂(1,000,000) ≈ 20)
-
-**Performance Improvement:** 50,000x faster!
-
-#### Index Usage in JPA/Hibernate
-
-JPA/Hibernate **automatically benefits** from database indexes:
-
-```java
-// This query uses idx_reservations_user automatically
-List<Reservation> reservations = reservationRepository.findByUserId(123L);
-// → SQL: SELECT * FROM reservations WHERE user_id = 123
-// → PostgreSQL uses idx_reservations_user for fast lookup
-```
-
-**Foreign Key Columns:**
-- Foreign keys often have indexes automatically (depending on database)
-- Example: `user_id` in `reservations` table
-- Used for JOIN operations and foreign key lookups
-
-#### Index Strategy in the System
-
-**Indexes are created for:**
-
-1. **Foreign Key Columns**: Fast JOINs and relationship queries
-   ```sql
-   CREATE INDEX idx_reservations_user ON reservations(user_id);
-   CREATE INDEX idx_reservations_route ON reservations(route_id);
-   ```
-
-2. **Frequently Filtered Columns**: WHERE clause columns
-   ```sql
-   CREATE INDEX idx_reservations_status ON reservations(status);
-   CREATE INDEX idx_routes_status ON routes(status);
-   ```
-
-3. **Search Columns**: Columns used in lookups
-   ```sql
-   CREATE INDEX idx_users_username ON users(username);
-   CREATE INDEX idx_stations_name ON stations(name);
-   ```
-
-4. **Composite Queries**: Multiple columns used together
-   ```sql
-   CREATE INDEX idx_reservations_user_status ON reservations(user_id, status);
-   ```
-
-5. **Time-Based Queries**: Date/time filtering
-   ```sql
-   CREATE INDEX idx_reservations_departure_time ON reservations(departure_time);
-   CREATE INDEX idx_reservations_created_at ON reservations(created_at);
-   ```
-
-#### Index Trade-offs
-
-**Benefits:**
-- ✅ **Faster Queries**: Dramatically improves SELECT performance
-- ✅ **Faster JOINs**: Speeds up relationship queries
-- ✅ **Faster Sorting**: Indexes are pre-sorted
-
-**Costs:**
-- ❌ **Storage**: Indexes require additional disk space
-- ❌ **Write Performance**: INSERT/UPDATE/DELETE operations must update indexes
-- ❌ **Maintenance**: Indexes need to be maintained as data changes
-
-**Best Practice:**
-- Create indexes on columns used in WHERE, JOIN, and ORDER BY clauses
-- Don't over-index: Too many indexes slow down writes
-- Monitor query performance to identify missing indexes
-
-#### Example: Index Impact on Query Performance
-
-```sql
--- Query: Find all active reservations for a user
-SELECT * FROM reservations 
-WHERE user_id = 123 AND status = 'CONFIRMED'
-ORDER BY departure_time;
-
--- Uses composite index: idx_reservations_user_status
--- Also uses: idx_reservations_departure_time (for ORDER BY)
--- Result: Fast query even with millions of reservations
+1. HTTP POST /api/reservations
+   Request Body: {
+     "routeId": 1,
+     "passengerName": "John Doe",
+     "seatCount": 2,
+     "departureTime": "2025-01-15T10:00:00",
+     "arrivalTime": "2025-01-15T11:30:00",
+     "passengerCategory": "ADULT",
+     "vehicleClass": "STANDARD"
+   }
+   ↓
+2. ReservationController.createReservation(request)
+   ↓
+3. ReservationService.createReservation(request)
+   ↓
+4. Get authenticated user from SecurityContext
+   ↓
+5. Load Route entity: routeRepository.findById(routeId)
+   → Hibernate: SELECT * FROM routes WHERE id = ?
+   ↓
+6. Create Reservation object using ReservationFactory
+   - Sets user, route, passenger details
+   - Creates TripTimeDetails (embedded value object)
+   - Sets passengerCategory and vehicleClass (enums)
+   - Sets status = ReservationStatus.CONFIRMED (enum with @Convert)
+   ↓
+7. Update denormalized fields (service layer)
+   - Sets originStationName, destinationStationName from route
+   - Calculates fare using FareCalculationService
+   - Sets baseFare, vatAmount, totalFare
+   ↓
+8. reservationRepository.save(reservation)
+   → Hibernate: INSERT INTO reservations (user_id, route_id, passenger_name, 
+                                          departure_time, arrival_time, 
+                                          passenger_category, vehicle_class, 
+                                          status, origin_station_name, 
+                                          destination_station_name, base_fare, 
+                                          vat_amount, total_fare, ...) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ...)
+   ↓
+9. BaseEntityListener.prePersist() (if Reservation extended BaseEntity)
+   → Sets createdAt and updatedAt timestamps
+   ↓
+10. ReservationStatusHistoryListener (if configured)
+    → Records status change (if applicable)
+    ↓
+11. Update route availability (service layer)
+    → Calls SeatAvailabilityService to recalculate availability
+    ↓
+12. Return Reservation object to controller
+    → Serialized to JSON and sent as HTTP response
 ```
 
 ---
 
-## 8. Benefits of This Architecture
+## 9. Key Features
 
-1. **Type Safety**: Java objects instead of raw SQL
-2. **Less Boilerplate**: Spring Data JPA reduces code
-3. **Automatic Mapping**: Hibernate handles object-relational mapping
-4. **Transaction Management**: Spring handles transactions
-5. **Lazy Loading**: Related entities loaded on demand
-6. **Caching**: Hibernate first-level cache
-7. **Validation**: Bean Validation annotations
+### 9.1 Pure JPA/Hibernate Schema Management
+
+- **No Flyway migrations** for schema (Flyway disabled)
+- **No SQL scripts** for table creation
+- **Automatic schema generation** from entity definitions
+- **Schema evolution** handled automatically
+
+### 9.2 Type-Safe Persistence
+
+- **Java enums** for constants (type-safe, compile-time validation)
+- **Entity relationships** mapped with annotations
+- **Value objects** embedded in entities
+- **Automatic conversion** between Java types and database types
+
+### 9.3 Automatic Timestamp Management
+
+- **BaseEntity** pattern for common fields
+- **Entity Listeners** for automatic timestamp setting
+- **Applied to all entities** extending BaseEntity
+
+### 9.4 History/Audit Tracking
+
+- **FarePolicyHistoryListener** - Automatic history for fare policies
+- **ReservationStatusHistoryListener** - Status change tracking
+- **Service layer** - Manual tracking where old values are needed
+
+### 9.5 Service Layer Validation
+
+- **All validation** moved from database to service layer
+- **Type-safe validation** using Java code
+- **Testable** validation logic
+- **Custom repository queries** for complex validation checks
+
+### 9.6 Denormalization in Service Layer
+
+- **No database triggers** for business logic
+- **Service layer** calculates and sets denormalized fields
+- **Type-safe calculations** using Java
+- **Maintainable** business logic
 
 ---
 
-## Summary
+## 10. Configuration Summary
+
+### application.properties
+
+```properties
+# Database Connection
+spring.datasource.url=jdbc:postgresql://localhost:5438/tms_db
+spring.datasource.username=tms_user
+spring.datasource.password=gi
+
+# JPA/Hibernate - Schema Management
+spring.jpa.hibernate.ddl-auto=update          # Auto-create/update schema
+spring.jpa.show-sql=false                    # Set to true to see SQL
+spring.flyway.enabled=false                  # Flyway disabled - JPA manages schema
+
+# Connection Pooling
+spring.datasource.hikari.maximum-pool-size=10
+spring.datasource.hikari.minimum-idle=5
+
+# Data Initialization
+app.data.initialize=true                     # Enable sample data via @PostConstruct
+```
+
+---
+
+## 11. Summary
 
 The persistence model uses:
-- **PostgreSQL** for storage
-- **JPA/Hibernate** for ORM
-- **Spring Data JPA** for repositories
-- **Service layer** for business logic
-- **Database triggers** for denormalization
-- **Database indexes** for query performance optimization
-- **Java Enums** for type-safe constants (PassengerCategory, VehicleClass)
-- **JPA Inheritance** for User entity hierarchy (SINGLE_TABLE strategy)
 
-This provides type safety, reduces boilerplate, and maintains data integrity while keeping the code maintainable. The inheritance pattern allows for clean separation of user types while maintaining efficient database queries. Enums ensure compile-time validation and readable database values. Indexes optimize query performance for frequently accessed columns and relationships.
+- **JPA/Hibernate** for ORM and schema management
+- **Spring Data JPA** for repositories (automatic CRUD operations)
+- **Entity Listeners** for automatic timestamp management and history tracking
+- **Java Enums** for type-safe constants (with `@Enumerated` and `@Convert`)
+- **Value Objects** (`@Embeddable`/`@Embedded`) for logical grouping
+- **Component Entities** (`@OneToMany` with cascade and orphanRemoval) for managed child entities
+- **Inheritance** (`SINGLE_TABLE` strategy) for User hierarchy
+- **Service Layer** for validation, denormalization, and business logic
+- **@PostConstruct** for sample data initialization
+
+**Key Benefits**:
+- ✅ Type-safe schema definition (entities define database structure)
+- ✅ Automatic schema management (no manual migrations)
+- ✅ Type-safe data access (Java objects, not SQL strings)
+- ✅ Automatic timestamp management (via Entity Listeners)
+- ✅ History/audit tracking (via Entity Listeners)
+- ✅ Service layer validation (testable, maintainable)
+- ✅ No database triggers for business logic (all in Java)
+- ✅ Pure JPA/Hibernate approach (standard, maintainable)
+
+This architecture provides a clean separation of concerns, type safety throughout the stack, and maintainable code that follows JPA best practices.
 

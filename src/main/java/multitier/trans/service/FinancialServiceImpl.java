@@ -6,6 +6,7 @@ import multitier.trans.repository.FarePolicyRepository;
 import multitier.trans.repository.ReservationRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -14,9 +15,10 @@ import java.util.Optional;
 /**
  * Service Implementation ("The Brain") for financial logic.
  * Implements the workflow for SCRUM-34 (Computation Service).
- * THIS VERSION IS FIXED.
+ * Uses Spring Data JPA repositories for all data access operations.
  */
 @Service
+@Transactional(readOnly = true)
 public class FinancialServiceImpl implements FinancialService {
 
     private final ReservationRepository reservationRepository;
@@ -40,7 +42,7 @@ public class FinancialServiceImpl implements FinancialService {
         for (Reservation res : allReservations) {
 
             // FIX: Call the correct method res.getStatus()
-            if ("CONFIRMED".equalsIgnoreCase(res.getStatus())) {
+            if (multitier.trans.model.enums.ReservationStatus.CONFIRMED.equals(res.getStatus())) {
 
                 // FIX: Call the correct getters from the 'res' object
                 Optional<FarePolicy> policy = farePolicyRepository.findByRouteIdAndPassengerCategoryAndVehicleClass(

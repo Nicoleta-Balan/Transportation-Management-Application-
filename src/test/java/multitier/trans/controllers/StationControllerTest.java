@@ -2,6 +2,7 @@ package multitier.trans.controllers;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import multitier.trans.model.Station;
+import multitier.trans.model.enums.StationStatus;
 import multitier.trans.service.StationService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,7 +40,7 @@ public class StationControllerTest {
     @Test
     public void whenCreateStation_withInvalidName_thenReturns400BadRequest() throws Exception {
         // 1. Arrange: Create a station with an invalid name ("X" has 1 char, rule needs 2)
-        Station invalidStation = new Station("X", "Valid Description", "Active");
+        Station invalidStation = new Station("X", "Valid Description", StationStatus.ACTIVE);
 
         // 2. Act & 3. Assert
         mockMvc.perform(post("/api/stations") // Send a POST request
@@ -56,7 +57,7 @@ public class StationControllerTest {
     @Test
     public void whenCreateStation_withNullName_thenReturns400BadRequest() throws Exception {
         // 1. Arrange: Create a station with a null name
-        Station invalidStation = new Station(null, "Valid Description", "Active");
+        Station invalidStation = new Station(null, "Valid Description", StationStatus.ACTIVE);
 
         // 2. Act & 3. Assert
         mockMvc.perform(post("/api/stations")
@@ -72,7 +73,7 @@ public class StationControllerTest {
     @Test
     public void whenCreateStation_withValidData_thenReturns201Created() throws Exception {
         // 1. Arrange: Create a station with valid data
-        Station validStation = new Station("Iasi", "Main Bus Station", "Active");
+        Station validStation = new Station("Iasi", "Main Bus Station", StationStatus.ACTIVE);
 
         // 2. Act & 3. Assert
         mockMvc.perform(post("/api/stations")

@@ -23,4 +23,13 @@ public interface RouteService {
      * @return The newly created and saved Route entity.
      */
     Route createRoute(CreateRouteRequest request);
+
+    /**
+     * Deletes a route with validation.
+     * Prevents deletion if the route has reservations.
+     * 
+     * @param routeId The ID of the route to delete
+     * @throws RuntimeException if the route cannot be deleted
+     */
+    void deleteRoute(Long routeId);
 }

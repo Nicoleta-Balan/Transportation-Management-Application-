@@ -2,46 +2,66 @@ package multitier.trans.service;
 
 import multitier.trans.dto.CreateReservationRequest;
 import multitier.trans.dto.FareCalculationResponse;
+import multitier.trans.factory.ReservationFactory;
 import multitier.trans.model.Reservation;
 import multitier.trans.model.Route;
-import multitier.trans.model.TripTimeDetails;
 import multitier.trans.model.User;
+import multitier.trans.model.enums.PassengerCategory;
+import multitier.trans.model.enums.ReservationStatus;
+import multitier.trans.model.enums.VehicleClass;
+import multitier.trans.model.ReservationStatusHistory;
 import multitier.trans.repository.ReservationRepository;
+import multitier.trans.repository.ReservationStatusHistoryRepository;
 import multitier.trans.repository.RouteRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 /**
  * Service Implementation for Reservation logic.
+ * Uses Spring Data JPA repositories for all data access operations.
+ * Uses ReservationFactory for creating reservation entities.
  */
 @Service
+@Transactional
 public class ReservationServiceImpl implements ReservationService {
 
     private final ReservationRepository reservationRepository;
     private final RouteRepository routeRepository;
     private final multitier.trans.service.UserService userService;
+    private final ReservationFactory reservationFactory;
+    private final FareCalculationService fareCalculationService;
+    private final SeatAvailabilityService seatAvailabilityService;
+    private final ReservationStatusHistoryRepository reservationStatusHistoryRepository;
 
     @Autowired
     public ReservationServiceImpl(
-            ReservationRepository reservationRepository, 
+            ReservationRepository reservationRepository,
             RouteRepository routeRepository,
-            multitier.trans.service.UserService userService) {
+            multitier.trans.service.UserService userService,
+            ReservationFactory reservationFactory,
+            FareCalculationService fareCalculationService,
+            SeatAvailabilityService seatAvailabilityService,
+            ReservationStatusHistoryRepository reservationStatusHistoryRepository) {
         this.reservationRepository = reservationRepository;
         this.routeRepository = routeRepository;
         this.userService = userService;
+        this.reservationFactory = reservationFactory;
+        this.fareCalculationService = fareCalculationService;
+        this.seatAvailabilityService = seatAvailabilityService;
+        this.reservationStatusHistoryRepository = reservationStatusHistoryRepository;
     }
 
     /**
-     * Reservation Creation (MODIFIED)
-     * Automatically associates the reservation with the currently authenticated user
+     * Reservation Creation
+     * Automatically associates the reservation with the currently authenticated user.
+     * Uses ReservationFactory to encapsulate creation logic.
      */
     @Override
     public Reservation createReservation(CreateReservationRequest request) {
@@ -54,57 +74,47 @@ public class ReservationServiceImpl implements ReservationService {
         Route route = routeRepository.findById(request.getRouteId())
                 .orElseThrow(() -> new RuntimeException("Route not found with id: " + request.getRouteId()));
 
-        // 3. Create the Value Object
-        TripTimeDetails tripDetails = new TripTimeDetails(
+        // 3. Business rule validation: Check seat availability
+        // This replaces database trigger validate_seat_capacity()
+        if (!seatAvailabilityService.checkSeatAvailability(
+                route.getId(),
+                request.getSeatCount(),
                 request.getDepartureTime(),
-                request.getArrivalTime()
-        );
-
-        // 4. Create the new Reservation entity
-        Reservation newReservation = new Reservation();
-        newReservation.setUser(user); // Associate with the authenticated user
-        newReservation.setRoute(route);
-        
-        // Set passenger details - if not provided, default to user's details
-        String passengerName = request.getPassengerName();
-        if (passengerName == null || passengerName.trim().isEmpty()) {
-            // Default to user's full name
-            passengerName = (user.getFirstName() != null ? user.getFirstName() : "") + 
-                          (user.getLastName() != null ? " " + user.getLastName() : "").trim();
-            if (passengerName.isEmpty()) {
-                passengerName = user.getUsername(); // Fallback to username
-            }
+                request.getArrivalTime())) {
+            throw new RuntimeException("Insufficient seats available for the requested time period");
         }
-        newReservation.setPassengerName(passengerName);
-        
-        // Default email to user's email if not provided
-        newReservation.setPassengerEmail(
-            request.getPassengerEmail() != null && !request.getPassengerEmail().trim().isEmpty()
-                ? request.getPassengerEmail()
-                : user.getEmail()
-        );
-        
-        // Default phone to user's phone if not provided
-        newReservation.setPassengerPhone(
-            request.getPassengerPhone() != null && !request.getPassengerPhone().trim().isEmpty()
-                ? request.getPassengerPhone()
-                : user.getPhone()
-        );
-        newReservation.setSeatCount(request.getSeatCount());
-        newReservation.setTripDetails(tripDetails);
-        newReservation.setStatus("CONFIRMED");
 
+        // 4. Business rule validation: Validate time constraints
+        // This replaces database trigger validate_reservation_times()
+        if (request.getArrivalTime().isBefore(request.getDepartureTime()) || 
+            request.getArrivalTime().equals(request.getDepartureTime())) {
+            throw new RuntimeException("Arrival time must be after departure time");
+        }
 
-        // 5. Set the new fare details from the DTO
-        newReservation.setPassengerCategory(request.getPassengerCategory());
-        newReservation.setVehicleClass(request.getVehicleClass());
+        // Check if departure time is not too far in the past
+        if (request.getDepartureTime().isBefore(LocalDateTime.now().minusDays(1))) {
+            throw new RuntimeException("Departure time cannot be more than 1 day in the past");
+        }
 
-        // 6. Save to database
+        // Check if departure time is not too far in the future
+        if (request.getDepartureTime().isAfter(LocalDateTime.now().plusYears(1))) {
+            throw new RuntimeException("Departure time cannot be more than 1 year in the future");
+        }
+
+        // 5. Use Factory to create Reservation
+        // Factory handles: passenger details defaults, TripTimeDetails creation, status initialization
+        Reservation newReservation = reservationFactory.createReservation(user, route, request);
+
+        // 6. Calculate and set denormalized fields (replaces database trigger)
+        updateDenormalizedFields(newReservation, route);
+
+        // 7. Save to database
         Reservation saved = reservationRepository.save(newReservation);
 
-        // Refresh to include denormalized fields populated by database triggers
-        return reservationRepository.findById(saved.getId())
-                .orElseThrow(() -> new RuntimeException("Reservation not found after creation: " + saved.getId()));
+        // 8. Update route availability (replaces database trigger)
+        updateRouteAvailability(route.getId(), request.getDepartureTime(), request.getArrivalTime());
+
+        return saved;
     }
 
     @Override
@@ -126,17 +136,32 @@ public class ReservationServiceImpl implements ReservationService {
             }
         }
         
-        reservation.setStatus("CANCELLED");
-        return reservationRepository.save(reservation);
+        ReservationStatus oldStatus = reservation.getStatus();
+        reservation.setStatus(ReservationStatus.CANCELLED);
+        Reservation saved = reservationRepository.save(reservation);
+        
+        // Record status change history (replaces database trigger)
+        recordStatusHistory(saved, oldStatus != null ? oldStatus.name() : null, ReservationStatus.CANCELLED.name(), null); // TODO: Add cancellationReason field if needed
+        
+        // Update route availability after cancellation (replaces database trigger)
+        updateRouteAvailability(
+                reservation.getRoute().getId(),
+                reservation.getTripDetails().getDepartureTime(),
+                reservation.getTripDetails().getArrivalTime()
+        );
+        
+        return saved;
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<Reservation> getAllReservations() {
         // Only admins should call this - regular users should use getMyReservations()
         return reservationRepository.findAll();
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<Reservation> getMyReservations() {
         // Get reservations for the currently authenticated user
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -146,6 +171,7 @@ public class ReservationServiceImpl implements ReservationService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Optional<Reservation> getReservationById(Long id) {
         Optional<Reservation> reservation = reservationRepository.findById(id);
         
@@ -169,38 +195,83 @@ public class ReservationServiceImpl implements ReservationService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public FareCalculationResponse calculateFare(Long routeId, String passengerCategory, Integer seatCount, LocalDateTime departureTime) {
-        // Call the database function
-        Map<String, Object> result = reservationRepository.calculateFare(
-                routeId.intValue(),
-                passengerCategory,
-                seatCount,
-                departureTime
+        // Convert string enum to enum type
+        PassengerCategory category = PassengerCategory.valueOf(passengerCategory.toUpperCase());
+        VehicleClass vehicleClass = VehicleClass.valueOf("STANDARD"); // Default, could be passed as parameter
+        
+        // Use the new FareCalculationService instead of database function
+        // This replaces the database function calculate_reservation_fare()
+        return fareCalculationService.calculateFare(routeId, category, vehicleClass, seatCount, departureTime);
+    }
+
+    /**
+     * Updates denormalized fields on a reservation.
+     * This replaces the database trigger update_reservation_denormalized_fields().
+     */
+    private void updateDenormalizedFields(Reservation reservation, Route route) {
+        // Set station names from route
+        reservation.setOriginStationName(route.getOriginStation().getName());
+        reservation.setDestinationStationName(route.getDestinationStation().getName());
+
+        // Calculate fare using FareCalculationService
+        FareCalculationResponse fare = fareCalculationService.calculateFare(
+                route.getId(),
+                reservation.getPassengerCategory(),
+                reservation.getVehicleClass(),
+                reservation.getSeatCount(),
+                reservation.getTripDetails().getDepartureTime()
         );
-        
-        // Extract values from the result map
-        // PostgreSQL returns DECIMAL as BigDecimal, but we need to handle it safely
-        Object baseFareObj = result.get("base_fare");
-        Object vatAmountObj = result.get("vat_amount");
-        Object totalFareObj = result.get("total_fare");
-        Object vatRateObj = result.get("vat_rate");
-        
-        BigDecimal baseFare = baseFareObj instanceof BigDecimal 
-                ? (BigDecimal) baseFareObj 
-                : BigDecimal.valueOf(((Number) baseFareObj).doubleValue());
-        
-        BigDecimal vatAmount = vatAmountObj instanceof BigDecimal
-                ? (BigDecimal) vatAmountObj
-                : BigDecimal.valueOf(((Number) vatAmountObj).doubleValue());
-        
-        BigDecimal totalFare = totalFareObj instanceof BigDecimal
-                ? (BigDecimal) totalFareObj
-                : BigDecimal.valueOf(((Number) totalFareObj).doubleValue());
-        
-        BigDecimal vatRate = vatRateObj instanceof BigDecimal
-                ? (BigDecimal) vatRateObj
-                : BigDecimal.valueOf(((Number) vatRateObj).doubleValue());
-        
-        return new FareCalculationResponse(baseFare, vatAmount, totalFare, vatRate);
+
+        // Set fare fields
+        reservation.setBaseFare(fare.getBaseFare());
+        reservation.setVatAmount(fare.getVatAmount());
+        reservation.setTotalFare(fare.getTotalFare());
+    }
+
+    /**
+     * Updates route availability for a specific departure time.
+     * This replaces the database trigger update_route_availability_trigger().
+     * 
+     * Note: We rely on SeatAvailabilityService to calculate availability on-demand.
+     * The route_availability table is optional for caching - if needed, we can add a RouteAvailabilityService.
+     * For now, the calculation is done dynamically when needed, so this method is a placeholder
+     * for future implementation if route_availability table caching is required.
+     */
+    private void updateRouteAvailability(Long routeId, LocalDateTime departureTime, LocalDateTime arrivalTime) {
+        // Note: Route availability is now calculated on-demand by SeatAvailabilityService
+        // If route_availability table caching is needed for performance, we can implement it here
+        // For now, this method serves as a placeholder to maintain the same interface
+        // as the database trigger it replaces
+    }
+
+    /**
+     * Records a status change in the reservation status history.
+     * This replaces the database trigger maintain_reservation_status_history().
+     */
+    private void recordStatusHistory(Reservation reservation, String oldStatus, String newStatus, String changeReason) {
+        // Only record if status actually changed
+        if (oldStatus != null && oldStatus.equals(newStatus)) {
+            return;
+        }
+
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String changedBy = (authentication != null) ? authentication.getName() : "SYSTEM";
+
+            ReservationStatusHistory history = new ReservationStatusHistory(
+                    reservation.getId(),
+                    oldStatus,
+                    newStatus,
+                    changedBy,
+                    changeReason
+            );
+
+            reservationStatusHistoryRepository.save(history);
+        } catch (Exception e) {
+            // Log error but don't fail the transaction
+            System.err.println("Error recording reservation status history: " + e.getMessage());
+        }
     }
 }

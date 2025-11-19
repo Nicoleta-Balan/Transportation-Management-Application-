@@ -8,6 +8,8 @@ import multitier.trans.model.Station;
 import multitier.trans.model.TripTimeDetails;
 // Importăm noile Enums
 import multitier.trans.model.enums.PassengerCategory;
+import multitier.trans.model.enums.ReservationStatus;
+import multitier.trans.model.enums.StationStatus;
 import multitier.trans.model.enums.VehicleClass;
 import multitier.trans.service.ReservationService;
 import org.junit.jupiter.api.BeforeEach;
@@ -49,10 +51,10 @@ public class ReservationControllerTest {
 
     @BeforeEach
     void setUp() {
-        testStationA = new Station("Origin", "Desc A", "Active");
+        testStationA = new Station("Origin", "Desc A", StationStatus.ACTIVE);
         testStationA.setId(1L);
 
-        testStationB = new Station("Destination", "Desc B", "Active");
+        testStationB = new Station("Destination", "Desc B", StationStatus.ACTIVE);
         testStationB.setId(2L);
 
         testRoute = new Route(testStationA, testStationB, 50);
@@ -87,7 +89,7 @@ public class ReservationControllerTest {
         savedReservation.setRoute(testRoute);
         savedReservation.setPassengerName("Test Passenger");
         savedReservation.setSeatCount(2);
-        savedReservation.setStatus("CONFIRMED");
+        savedReservation.setStatus(ReservationStatus.CONFIRMED);
         savedReservation.setTripDetails(new TripTimeDetails(testDeparture, testArrival));
         savedReservation.setPassengerCategory(PassengerCategory.ADULT);
         savedReservation.setVehicleClass(VehicleClass.STANDARD);
@@ -115,7 +117,7 @@ public class ReservationControllerTest {
         cancelledReservation.setId(1L);
         cancelledReservation.setRoute(testRoute);
         cancelledReservation.setPassengerName("Test Passenger");
-        cancelledReservation.setStatus("CANCELLED"); // The service changed the status
+        cancelledReservation.setStatus(ReservationStatus.CANCELLED); // The service changed the status
         cancelledReservation.setPassengerCategory(PassengerCategory.ADULT);
         cancelledReservation.setVehicleClass(VehicleClass.STANDARD);
 

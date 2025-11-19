@@ -5,89 +5,95 @@
 The Transportation Management System uses the **Repository-Service Pattern**, a layered architecture that separates data access (Repository) from business logic (Service). This pattern provides clean separation of concerns, testability, and maintainability.
 
 ```
-Controller → Service → Repository → Database
-   (API)    (Logic)   (Data Access)
+HTTP Request → Controller → Service → Repository (Spring Data JPA) → JPA/Hibernate → PostgreSQL Database
 ```
+
+**Key Principles**:
+- **Repositories**: Data access only - no business logic
+- **Services**: Business logic and orchestration - no direct database access
+- **Spring Data JPA**: Automatic CRUD operations and query generation
+- **Dependency Injection**: Services depend on repositories via constructor injection
 
 ---
 
 ## 1. Repository Layer (Data Access)
 
-### What is a Repository?
+### 1.1 Repository Pattern
 
-A **Repository** is an abstraction over data access. It provides a collection-like interface for accessing domain objects without exposing database implementation details.
+**Approach**: Spring Data JPA interfaces extending `JpaRepository<Entity, ID>`
 
-### Spring Data JPA Repository
+**All Repositories** (13 total):
+1. `FarePolicyHistoryRepository` - History records for fare policies
+2. `FarePolicyRepository` - Fare policy management
+3. `ReservationRepository` - Reservation management
+4. `ReservationStatusHistoryRepository` - Reservation status change history
+5. `RevenueSummaryRepository` - Revenue summary records
+6. `RouteAvailabilityRepository` - Route availability records
+7. `RouteRepository` - Route management
+8. `RouteStatisticsRepository` - Route statistics records
+9. `RouteTimetableEntryRepository` - Timetable entry management
+10. `RouteTimetableRepository` - Route timetable management
+11. `StationRepository` - Station management
+12. `UserRepository` - User management (with JPA inheritance)
+13. `VatRateRepository` - VAT rate management
 
-In this application, repositories extend `JpaRepository<Entity, ID>`, which provides automatic CRUD operations without writing any SQL.
+### 1.2 Automatic CRUD Operations
 
-### Example: `ReservationRepository`
+All repositories automatically provide these methods from `JpaRepository`:
 
+```java
+// All these methods are available automatically:
+repository.save(entity);           // INSERT or UPDATE
+repository.findById(id);           // SELECT * WHERE id = ?
+repository.findAll();              // SELECT * FROM table
+repository.delete(entity);         // DELETE WHERE id = ?
+repository.count();                // SELECT COUNT(*) FROM table
+repository.existsById(id);         // SELECT COUNT(*) WHERE id = ? > 0
+repository.deleteById(id);         // DELETE WHERE id = ?
+repository.saveAll(entities);     // Batch INSERT/UPDATE
+repository.deleteAll();            // DELETE FROM table
+```
+
+### 1.3 Repository Implementations
+
+#### ReservationRepository
+
+**Location**: `src/main/java/multitier/trans/repository/ReservationRepository.java`
+
+**Custom Methods**:
 ```java
 @Repository
 public interface ReservationRepository extends JpaRepository<Reservation, Long> {
     
-    // Spring Data JPA auto-generates SQL from method name
+    // Method name derivation - Spring generates SQL automatically
     List<Reservation> findByRouteId(Long routeId);
     // → SQL: SELECT * FROM reservations WHERE route_id = ?
     
     List<Reservation> findByUserId(Long userId);
     // → SQL: SELECT * FROM reservations WHERE user_id = ?
     
-    // Custom native query for database function
+    List<Reservation> findByPassengerName(String passengerName);
+    // → SQL: SELECT * FROM reservations WHERE passenger_name = ?
+    
+    // Deprecated: Use FareCalculationService instead
+    @Deprecated
     @Query(value = "SELECT * FROM calculate_reservation_fare(...)", nativeQuery = true)
     Map<String, Object> calculateFare(...);
 }
 ```
 
-### Key Features:
+**Usage**: Used by `ReservationServiceImpl` for reservation queries and persistence.
 
-1. **No Implementation Required**: Spring Data JPA automatically creates implementations
-2. **Method Name → SQL**: Spring generates SQL from method names
-3. **Built-in CRUD**: `save()`, `findById()`, `findAll()`, `delete()`, etc.
-4. **Custom Queries**: Use `@Query` annotation for complex queries
+#### FarePolicyRepository
 
-### Automatic Methods from `JpaRepository`:
+**Location**: `src/main/java/multitier/trans/repository/FarePolicyRepository.java`
 
-```java
-// All these methods are available automatically:
-reservationRepository.save(reservation);        // INSERT or UPDATE
-reservationRepository.findById(id);             // SELECT * WHERE id = ?
-reservationRepository.findAll();                // SELECT * FROM reservations
-reservationRepository.delete(reservation);      // DELETE WHERE id = ?
-reservationRepository.count();                  // SELECT COUNT(*) FROM reservations
-reservationRepository.existsById(id);           // SELECT COUNT(*) WHERE id = ? > 0
-```
-
-### Query Method Naming Convention:
-
-Spring Data JPA generates queries based on method names:
-
-| Method Name | Generated SQL |
-|------------|---------------|
-| `findByRouteId(Long id)` | `SELECT * FROM reservations WHERE route_id = ?` |
-| `findByUserIdAndStatus(Long userId, String status)` | `SELECT * FROM reservations WHERE user_id = ? AND status = ?` |
-| `findByName(String name)` | `SELECT * FROM stations WHERE name = ?` |
-| `findByRouteIdOrderByCreatedAtDesc(Long id)` | `SELECT * FROM reservations WHERE route_id = ? ORDER BY created_at DESC` |
-
-### Example: `StationRepository`
-
-```java
-@Repository
-public interface StationRepository extends JpaRepository<Station, Long> {
-    
-    // Custom query method - Spring generates: SELECT * FROM stations WHERE name = ?
-    Station findByName(String name);
-}
-```
-
-### Example: `FarePolicyRepository`
-
+**Custom Methods**:
 ```java
 @Repository
 public interface FarePolicyRepository extends JpaRepository<FarePolicy, Long> {
     
-    // Complex query with multiple parameters
+    // Method name derivation
     Optional<FarePolicy> findByRouteIdAndPassengerCategoryAndVehicleClass(
             Long routeId,
             PassengerCategory passengerCategory,
@@ -95,18 +101,87 @@ public interface FarePolicyRepository extends JpaRepository<FarePolicy, Long> {
     );
     // → SQL: SELECT * FROM fare_policies 
     //        WHERE route_id = ? AND passenger_category = ? AND vehicle_class = ?
+    
+    // Custom JPQL query - finds active fare policy for a date
+    @Query("SELECT f FROM FarePolicy f WHERE f.route.id = :routeId " +
+           "AND f.passengerCategory = :category " +
+           "AND f.vehicleClass = :vehicleClass " +
+           "AND f.status = :status " +
+           "AND f.effectiveFrom <= :date " +
+           "AND (f.effectiveTo IS NULL OR f.effectiveTo > :date) " +
+           "ORDER BY f.effectiveFrom DESC")
+    Optional<FarePolicy> findActiveFarePolicy(
+            @Param("routeId") Long routeId,
+            @Param("category") PassengerCategory category,
+            @Param("vehicleClass") VehicleClass vehicleClass,
+            @Param("status") PolicyStatus status,
+            @Param("date") LocalDate date
+    );
+    
+    // Custom JPQL query - checks for overlapping active policies
+    @Query("SELECT COUNT(f) > 0 FROM FarePolicy f WHERE f.route.id = :routeId " +
+           "AND f.passengerCategory = :category " +
+           "AND f.vehicleClass = :vehicleClass " +
+           "AND f.status = :status " +
+           "AND f.id != :excludeId " +
+           "AND f.effectiveFrom < :maxEffectiveTo " +
+           "AND (f.effectiveTo IS NULL OR f.effectiveTo > :effectiveFrom)")
+    boolean existsOverlappingActivePolicy(...);
 }
 ```
 
-### Example: `UserRepository` (with JPA Inheritance)
+**Key Features**:
+- Uses JPQL (Java Persistence Query Language) for type-safe queries
+- Supports enum parameters (`PolicyStatus`, `PassengerCategory`, `VehicleClass`)
+- Default method with convenience overload
 
-The `UserRepository` works with JPA inheritance using the `SINGLE_TABLE` strategy. It can query both `RegularUser` and `AdminUser` entities through the base `User` entity:
+**Usage**: Used by `FarePolicyServiceImpl` for fare policy lookups and validation.
 
+#### VatRateRepository
+
+**Location**: `src/main/java/multitier/trans/repository/VatRateRepository.java`
+
+**Custom Methods**:
+```java
+@Repository
+public interface VatRateRepository extends JpaRepository<VatRate, Long> {
+    
+    // Custom JPQL query - finds active VAT rate for a date
+    @Query("SELECT v FROM VatRate v WHERE v.effectiveFrom <= :date " +
+           "AND (v.effectiveTo IS NULL OR v.effectiveTo > :date) " +
+           "ORDER BY v.effectiveFrom DESC")
+    Optional<VatRate> findActiveVatRateForDate(@Param("date") LocalDateTime date);
+    
+    // Default method - convenience wrapper
+    default Optional<VatRate> findCurrentVatRate() {
+        return findActiveVatRateForDate(LocalDateTime.now());
+    }
+    
+    // Custom JPQL query - checks for overlapping VAT rates
+    @Query("SELECT COUNT(v) > 0 FROM VatRate v WHERE v.id != :excludeId " +
+           "AND v.effectiveFrom < :maxEffectiveTo " +
+           "AND (v.effectiveTo IS NULL OR v.effectiveTo > :effectiveFrom)")
+    boolean existsOverlappingVatRate(...);
+}
+```
+
+**Key Features**:
+- Default methods for convenience
+- Date-based queries for effective rates
+- Overlap detection for validation
+
+**Usage**: Used by `VatRateServiceImpl` and `FareCalculationServiceImpl` for VAT rate lookups.
+
+#### UserRepository
+
+**Location**: `src/main/java/multitier/trans/repository/UserRepository.java`
+
+**Custom Methods**:
 ```java
 @Repository
 public interface UserRepository extends JpaRepository<User, Long> {
     
-    // These methods work for both RegularUser and AdminUser
+    // Method name derivation
     Optional<User> findByUsername(String username);
     // → SQL: SELECT * FROM users WHERE username = ?
     
@@ -121,329 +196,617 @@ public interface UserRepository extends JpaRepository<User, Long> {
 }
 ```
 
-**Key Points:**
-- The repository is defined for the base `User` entity
-- Spring Data JPA automatically handles the `user_type` discriminator column
-- Queries return the appropriate subclass (`RegularUser` or `AdminUser`) based on `user_type`
-- All user types are stored in the same `users` table
+**Key Features**:
+- Works with JPA inheritance (`SINGLE_TABLE` strategy)
+- Queries return correct subclass (`RegularUser` or `AdminUser`) based on `user_type` discriminator
+- All user types stored in single `users` table
+
+**Usage**: Used by `UserServiceImpl` for user authentication and registration.
+
+#### StationRepository
+
+**Location**: `src/main/java/multitier/trans/repository/StationRepository.java`
+
+**Custom Methods**:
+```java
+@Repository
+public interface StationRepository extends JpaRepository<Station, Long> {
+    
+    // Method name derivation
+    Station findByName(String name);
+    // → SQL: SELECT * FROM stations WHERE name = ?
+}
+```
+
+**Usage**: Used by `StationServiceImpl` for station lookups.
+
+#### RouteRepository
+
+**Location**: `src/main/java/multitier/trans/repository/RouteRepository.java`
+
+**Custom Methods**: None (uses only automatic CRUD methods)
+
+**Usage**: Used by `RouteServiceImpl`, `ReservationServiceImpl`, and other services for route management.
+
+#### RouteTimetableRepository
+
+**Location**: `src/main/java/multitier/trans/repository/RouteTimetableRepository.java`
+
+**Custom Methods**:
+```java
+public interface RouteTimetableRepository extends JpaRepository<RouteTimetable, Long> {
+    
+    // EntityGraph for eager loading of entries (component entities)
+    @EntityGraph(attributePaths = "entries")
+    List<RouteTimetable> findByRouteId(Long routeId);
+    
+    @EntityGraph(attributePaths = "entries")
+    Optional<RouteTimetable> findByIdAndRouteId(Long id, Long routeId);
+}
+```
+
+**Key Features**:
+- Uses `@EntityGraph` to eagerly load `RouteTimetableEntry` collection
+- Prevents N+1 query problem when accessing timetable entries
+- Loads parent and children in single query
+
+**Usage**: Used by `TimetableServiceImpl` for timetable management with entries.
+
+#### History Repositories
+
+**FarePolicyHistoryRepository**:
+- Location: `src/main/java/multitier/trans/repository/FarePolicyHistoryRepository.java`
+- Purpose: Stores history of fare policy changes
+- Used by: `FarePolicyHistoryListener` (Entity Listener)
+
+**ReservationStatusHistoryRepository**:
+- Location: `src/main/java/multitier/trans/repository/ReservationStatusHistoryRepository.java`
+- Purpose: Stores history of reservation status changes
+- Used by: `ReservationServiceImpl.recordStatusHistory()`
+
+#### Other Repositories
+
+**RouteAvailabilityRepository**, **RouteStatisticsRepository**, **RevenueSummaryRepository**, **RouteTimetableEntryRepository**:
+- Provide standard CRUD operations
+- Used by various services for data access
 
 ---
 
 ## 2. Service Layer (Business Logic)
 
-### What is a Service?
+### 2.1 Service Pattern
 
-A **Service** contains business logic and orchestrates operations between repositories. It acts as a facade, providing a clean API for controllers.
+**All Services** (11 total):
+1. `AnalyticsService` / `AnalyticsServiceImpl` - Analytics and reporting
+2. `FareCalculationService` / `FareCalculationServiceImpl` - Fare calculation logic
+3. `FarePolicyService` / `FarePolicyServiceImpl` - Fare policy management
+4. `FinancialService` / `FinancialServiceImpl` - Financial summaries and revenue
+5. `ReservationService` / `ReservationServiceImpl` - Reservation management
+6. `RouteService` / `RouteServiceImpl` - Route management
+7. `SeatAvailabilityService` / `SeatAvailabilityServiceImpl` - Seat availability calculation
+8. `StationService` / `StationServiceImpl` - Station management
+9. `TimetableService` / `TimetableServiceImpl` - Route timetable management
+10. `UserService` / `UserServiceImpl` - User management and authentication
+11. `VatRateService` / `VatRateServiceImpl` - VAT rate management
 
-### Service Pattern Structure:
+### 2.2 Service Responsibilities
 
+**Key Responsibilities**:
+1. **Business Logic**: Validations, calculations, workflows
+2. **Orchestration**: Coordinates multiple repositories
+3. **Transaction Management**: Ensures data consistency (`@Transactional`)
+4. **Security**: Access control and authorization
+5. **Error Handling**: Converts exceptions to meaningful errors
+6. **Validation**: Business rule enforcement (moved from database triggers)
+
+### 2.3 Service Implementations
+
+#### ReservationServiceImpl
+
+**Location**: `src/main/java/multitier/trans/service/ReservationServiceImpl.java`
+
+**Dependencies**:
+- `ReservationRepository` - Data access
+- `RouteRepository` - Route lookups
+- `UserService` - User authentication
+- `ReservationFactory` - Entity creation
+- `FareCalculationService` - Fare calculation
+- `SeatAvailabilityService` - Seat availability checks
+- `ReservationStatusHistoryRepository` - Status history tracking
+
+**Key Methods**:
 ```java
-// 1. Interface (Contract)
-public interface ReservationService {
-    Reservation createReservation(CreateReservationRequest request);
-    List<Reservation> getMyReservations();
-}
-
-// 2. Implementation (Business Logic)
 @Service
+@Transactional
 public class ReservationServiceImpl implements ReservationService {
-    
-    private final ReservationRepository reservationRepository;
-    private final RouteRepository routeRepository;
-    private final UserService userService;
-    
-    @Autowired
-    public ReservationServiceImpl(...) {
-        // Dependency injection
-    }
     
     @Override
     public Reservation createReservation(CreateReservationRequest request) {
-        // Business logic here
+        // 1. Get authenticated user
+        User user = userService.findByUsername(username);
+        
+        // 2. Load route
+        Route route = routeRepository.findById(request.getRouteId())
+                .orElseThrow(() -> new RuntimeException("Route not found"));
+        
+        // 3. Business validation: Check seat availability
+        if (!seatAvailabilityService.checkSeatAvailability(...)) {
+            throw new RuntimeException("Insufficient seats available");
+        }
+        
+        // 4. Business validation: Validate time constraints
+        if (request.getArrivalTime().isBefore(request.getDepartureTime())) {
+            throw new RuntimeException("Arrival time must be after departure time");
+        }
+        
+        // 5. Create reservation using factory
+        Reservation reservation = reservationFactory.createReservation(...);
+        
+        // 6. Update denormalized fields (service layer)
+        updateDenormalizedFields(reservation, route);
+        
+        // 7. Save reservation
+        Reservation saved = reservationRepository.save(reservation);
+        
+        // 8. Record status history
+        recordStatusHistory(saved, null, ReservationStatus.CONFIRMED, "Reservation created");
+        
+        return saved;
+    }
+    
+    @Override
+    public Reservation cancelReservation(Long reservationId) {
+        Reservation reservation = reservationRepository.findById(reservationId)
+                .orElseThrow(() -> new RuntimeException("Reservation not found"));
+        
+        ReservationStatus oldStatus = reservation.getStatus();
+        reservation.setStatus(ReservationStatus.CANCELLED);
+        
+        Reservation saved = reservationRepository.save(reservation);
+        
+        // Record status change history
+        recordStatusHistory(saved, oldStatus, ReservationStatus.CANCELLED, "Reservation cancelled");
+        
+        return saved;
+    }
+    
+    private void updateDenormalizedFields(Reservation reservation, Route route) {
+        // Set station names from route
+        reservation.setOriginStationName(route.getOriginStation().getName());
+        reservation.setDestinationStationName(route.getDestinationStation().getName());
+        
+        // Calculate fare using FareCalculationService
+        FareCalculationResponse fare = fareCalculationService.calculateFare(...);
+        reservation.setBaseFare(fare.getBaseFare());
+        reservation.setVatAmount(fare.getVatAmount());
+        reservation.setTotalFare(fare.getTotalFare());
     }
 }
 ```
 
-### Key Responsibilities:
+**Key Features**:
+- Uses factory pattern for entity creation
+- Service layer validation (replaces database triggers)
+- Service layer denormalization (replaces database triggers)
+- Manual status history tracking (service has access to old/new values)
+- Coordinates multiple services and repositories
 
-1. **Business Logic**: Validations, calculations, workflows
-2. **Orchestration**: Coordinates multiple repositories
-3. **Transaction Management**: Ensures data consistency
-4. **Security**: Access control and authorization
-5. **Error Handling**: Converts exceptions to meaningful errors
+#### FarePolicyServiceImpl
+
+**Location**: `src/main/java/multitier/trans/service/FarePolicyServiceImpl.java`
+
+**Dependencies**:
+- `FarePolicyRepository` - Data access
+
+**Key Methods**:
+```java
+@Service
+@Transactional
+public class FarePolicyServiceImpl implements FarePolicyService {
+    
+    @Override
+    @Transactional(readOnly = true)
+    public FarePolicy getActiveFarePolicy(Long routeId, PassengerCategory category, 
+                                         VehicleClass vehicleClass, LocalDateTime date) {
+        return farePolicyRepository.findActiveFarePolicy(
+                routeId, category, vehicleClass, date.toLocalDate())
+                .orElseThrow(() -> new RuntimeException("No active fare policy found"));
+    }
+    
+    @Override
+    public void validateFarePolicy(FarePolicy farePolicy) {
+        // Business validation: Date range check
+        if (farePolicy.getEffectiveTo() != null && 
+            !farePolicy.getEffectiveTo().isAfter(farePolicy.getEffectiveFrom())) {
+            throw new RuntimeException("Effective end date must be after effective start date");
+        }
+        
+        // Business validation: Check for overlapping active policies
+        if (PolicyStatus.ACTIVE.equals(farePolicy.getStatus())) {
+            boolean hasOverlap = farePolicyRepository.existsOverlappingActivePolicy(...);
+            if (hasOverlap) {
+                throw new RuntimeException("Overlapping active fare policy exists");
+            }
+        }
+    }
+    
+    @Override
+    public FarePolicy saveFarePolicy(FarePolicy farePolicy) {
+        validateFarePolicy(farePolicy);  // Business validation before save
+        return farePolicyRepository.save(farePolicy);
+    }
+}
+```
+
+**Key Features**:
+- Business validation in service layer (replaces database triggers)
+- Uses custom repository queries for complex lookups
+- Read-only transactions for queries (`@Transactional(readOnly = true)`)
+
+#### FareCalculationServiceImpl
+
+**Location**: `src/main/java/multitier/trans/service/FareCalculationServiceImpl.java`
+
+**Dependencies**:
+- `FarePolicyService` - Get base price
+- `VatRateService` - Get VAT rate
+
+**Key Methods**:
+```java
+@Service
+@Transactional(readOnly = true)
+public class FareCalculationServiceImpl implements FareCalculationService {
+    
+    @Override
+    public FareCalculationResponse calculateFare(Long routeId, PassengerCategory passengerCategory,
+                                                 VehicleClass vehicleClass, Integer seatCount,
+                                                 LocalDateTime departureTime) {
+        // 1. Get base price per seat from fare policy
+        BigDecimal basePricePerSeat = farePolicyService.getActiveFarePolicyPrice(
+                routeId, passengerCategory, vehicleClass, departureTime);
+        
+        // 2. Calculate base fare (price per seat * number of seats)
+        BigDecimal baseFare = basePricePerSeat
+                .multiply(BigDecimal.valueOf(seatCount))
+                .setScale(2, RoundingMode.HALF_UP);
+        
+        // 3. Get VAT rate for the departure date
+        BigDecimal vatRate = vatRateService.getVatRateForDate(departureTime);
+        
+        // 4. Calculate VAT amount
+        BigDecimal vatAmount = baseFare
+                .multiply(vatRate)
+                .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+        
+        // 5. Calculate total fare (base + VAT)
+        BigDecimal totalFare = baseFare.add(vatAmount).setScale(2, RoundingMode.HALF_UP);
+        
+        return new FareCalculationResponse(baseFare, vatAmount, totalFare, vatRate);
+    }
+}
+```
+
+**Key Features**:
+- Replaces database function `calculate_reservation_fare()`
+- Orchestrates multiple services
+- Type-safe calculations using Java BigDecimal
+- Read-only service (no data modification)
+
+#### UserServiceImpl
+
+**Location**: `src/main/java/multitier/trans/service/UserServiceImpl.java`
+
+**Dependencies**:
+- `UserRepository` - Data access
+- `UserFactory` - Entity creation
+
+**Key Methods**:
+```java
+@Service
+public class UserServiceImpl implements UserService {
+    
+    @Override
+    @Transactional
+    public User register(RegisterRequest request) {
+        // Business validation: Check if username exists
+        if (userRepository.existsByUsername(request.getUsername())) {
+            throw new RuntimeException("Username already exists");
+        }
+        
+        // Business validation: Check if email exists
+        if (userRepository.existsByEmail(request.getEmail())) {
+            throw new RuntimeException("Email already exists");
+        }
+        
+        // Use Factory to create RegularUser (JPA inheritance)
+        User user = userFactory.createRegularUser(
+                request.getUsername(),
+                request.getEmail(),
+                request.getPassword(),
+                request.getFirstName(),
+                request.getLastName(),
+                request.getPhone()
+        );
+        
+        return userRepository.save(user);
+    }
+    
+    @Override
+    public User findByUsername(String username) {
+        return userRepository.findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+    }
+    
+    @Override
+    public User createAdminUser(String username, String email, String password, ...) {
+        // Business validation
+        if (userRepository.existsByUsername(username)) {
+            throw new RuntimeException("Username already exists");
+        }
+        
+        // Use Factory to create AdminUser (JPA inheritance)
+        User adminUser = userFactory.createAdminUser(...);
+        
+        return userRepository.save(adminUser);
+    }
+}
+```
+
+**Key Features**:
+- Works with JPA inheritance (`RegularUser`, `AdminUser`)
+- Uses factory pattern for entity creation
+- Business validation before persistence
+- Repository automatically handles discriminator column
+
+#### StationServiceImpl
+
+**Location**: `src/main/java/multitier/trans/service/StationServiceImpl.java`
+
+**Dependencies**:
+- `StationRepository` - Data access
+- `RouteRepository` - Route lookups
+- `ReservationRepository` - Reservation updates
+
+**Key Methods**:
+```java
+@Service
+@Transactional
+public class StationServiceImpl implements StationService {
+    
+    @Override
+    public Station updateStation(Station station) {
+        Station existingStation = stationRepository.findById(station.getId())
+                .orElseThrow(() -> new RuntimeException("Station not found"));
+        
+        // Business validation: Prevent closing station if it has routes
+        if (StationStatus.CLOSED.equals(station.getStatus()) && 
+            !StationStatus.CLOSED.equals(existingStation.getStatus())) {
+            List<Route> routes = routeRepository.findAll().stream()
+                    .filter(route -> route.getOriginStation().getId().equals(station.getId()) || 
+                                    route.getDestinationStation().getId().equals(station.getId()))
+                    .toList();
+            
+            if (!routes.isEmpty()) {
+                throw new RuntimeException("Cannot close station because it has routes");
+            }
+        }
+        
+        // Update denormalized fields in reservations if station name changed
+        String oldName = existingStation.getName();
+        String newName = station.getName();
+        if (!oldName.equals(newName)) {
+            List<Reservation> reservations = reservationRepository.findByRouteId(...);
+            for (Reservation reservation : reservations) {
+                if (reservation.getOriginStationName().equals(oldName)) {
+                    reservation.setOriginStationName(newName);
+                }
+                if (reservation.getDestinationStationName().equals(oldName)) {
+                    reservation.setDestinationStationName(newName);
+                }
+            }
+            reservationRepository.saveAll(reservations);
+        }
+        
+        return stationRepository.save(station);
+    }
+}
+```
+
+**Key Features**:
+- Business validation (replaces database triggers)
+- Service layer denormalization (updates related entities)
+- Coordinates multiple repositories
+
+#### VatRateServiceImpl
+
+**Location**: `src/main/java/multitier/trans/service/VatRateServiceImpl.java`
+
+**Dependencies**:
+- `VatRateRepository` - Data access
+
+**Key Features**:
+- Business validation for overlapping VAT rates
+- Date-based lookups for effective rates
+- Similar pattern to `FarePolicyServiceImpl`
+
+#### Other Services
+
+**RouteServiceImpl**, **TimetableServiceImpl**, **SeatAvailabilityServiceImpl**, **FinancialServiceImpl**, **AnalyticsServiceImpl**:
+- Follow similar patterns
+- Use repositories for data access
+- Implement business logic and validation
+- Coordinate multiple repositories when needed
 
 ---
 
-## 3. Repository-Service Interaction Examples
+## 3. Repository-Service Interaction Patterns
 
-### Example 1: Simple Service (StationService)
+### 3.1 Pattern 1: Simple Pass-Through
+
+**Service delegates directly to repository**:
 
 ```java
 @Service
 public class StationServiceImpl implements StationService {
     
-    private final StationRepository stationRepository;
-    
-    @Autowired
-    public StationServiceImpl(StationRepository stationRepository) {
-        this.stationRepository = stationRepository;
-    }
-    
-    @Override
-    public Station createStation(Station station) {
-        // Simple pass-through with potential validation
-        return stationRepository.save(station);
-    }
-    
     @Override
     public List<Station> getAllStations() {
-        // Direct repository call
-        return stationRepository.findAll();
+        return stationRepository.findAll();  // Direct delegation
     }
 }
 ```
 
-**Flow:**
-```
-Controller → StationService.createStation() → StationRepository.save() → Database
-```
+**Flow**: `Controller → Service → Repository → Database`
 
-### Example 1.5: User Service (with JPA Inheritance)
+### 3.2 Pattern 2: Business Logic + Validation
 
-The `UserService` demonstrates how services work with JPA inheritance to create different user types:
+**Service adds validation before repository call**:
 
 ```java
 @Service
 public class UserServiceImpl implements UserService {
     
-    private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
-    
     @Override
-    @Transactional
     public User register(RegisterRequest request) {
-        // Validation
+        // Business validation
         if (userRepository.existsByUsername(request.getUsername())) {
             throw new RuntimeException("Username already exists");
         }
         
-        // Create RegularUser (inherits from User)
-        // The repository saves it, and JPA sets user_type = 'USER'
-        RegularUser user = new RegularUser(
-                request.getUsername(),
-                request.getEmail(),
-                passwordEncoder.encode(request.getPassword())
-        );
-        user.setFirstName(request.getFirstName());
-        user.setLastName(request.getLastName());
+        // Business logic: Create entity
+        User user = userFactory.createRegularUser(...);
         
-        // Repository automatically handles inheritance
+        // Repository call
         return userRepository.save(user);
     }
-    
-    @Override
-    public User createAdminUser(String username, String email, String password) {
-        // Create AdminUser (inherits from User)
-        // The repository saves it, and JPA sets user_type = 'ADMIN'
-        AdminUser adminUser = new AdminUser(
-                username,
-                email,
-                passwordEncoder.encode(password)
-        );
-        
-        // Same repository, different entity type
-        return userRepository.save(adminUser);
-    }
-    
-    @Override
-    public User findByUsername(String username) {
-        // Repository returns the correct subclass based on user_type
-        return userRepository.findByUsername(username)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
-    }
 }
 ```
 
-**Flow:**
-```
-Controller → UserService.register()
-    ↓
-    → UserRepository.existsByUsername() [validation]
-    → Create RegularUser entity
-    → UserRepository.save(regularUser)
-    → JPA sets user_type = 'USER' automatically
-    ↓
-Database (users table with user_type discriminator)
-```
+**Flow**: `Controller → Service (validation) → Repository → Database`
 
-**Key Points:**
-- Service creates specific subclasses (`RegularUser`, `AdminUser`)
-- Repository is defined for base `User` class but handles all subclasses
-- JPA automatically manages the `user_type` discriminator column
-- `findByUsername()` returns the correct subclass instance
+### 3.3 Pattern 3: Orchestration (Multiple Repositories)
 
-### Example 2: Complex Service (RouteService)
-
-```java
-@Service
-public class RouteServiceImpl implements RouteService {
-    
-    private final RouteRepository routeRepository;
-    private final StationRepository stationRepository;  // Multiple repositories!
-    
-    @Override
-    public Route createRoute(CreateRouteRequest request) {
-        // 1. Business Logic: Find origin station
-        Station origin = stationRepository.findById(request.getOriginStationId())
-                .orElseThrow(() -> new RuntimeException("Station not found"));
-        
-        // 2. Business Logic: Find destination station
-        Station destination = stationRepository.findById(request.getDestinationStationId())
-                .orElseThrow(() -> new RuntimeException("Station not found"));
-        
-        // 3. Business Logic: Validation
-        if (origin.getId().equals(destination.getId())) {
-            throw new RuntimeException("Origin and destination cannot be the same");
-        }
-        
-        // 4. Create entity
-        Route newRoute = new Route(origin, destination, request.getVehicleCapacity());
-        
-        // 5. Save via repository
-        return routeRepository.save(newRoute);
-    }
-}
-```
-
-**Flow:**
-```
-Controller → RouteService.createRoute()
-    ↓
-    → StationRepository.findById() [origin]
-    → StationRepository.findById() [destination]
-    → Validation logic
-    → RouteRepository.save()
-    ↓
-Database
-```
-
-### Example 3: Advanced Service (ReservationService)
+**Service coordinates multiple repositories**:
 
 ```java
 @Service
 public class ReservationServiceImpl implements ReservationService {
     
-    private final ReservationRepository reservationRepository;
-    private final RouteRepository routeRepository;
-    private final UserService userService;  // Can use other services!
-    
     @Override
     public Reservation createReservation(CreateReservationRequest request) {
-        // 1. Get authenticated user (from another service)
-        User user = userService.findByUsername(username);
+        // Multiple repository calls
+        User user = userService.findByUsername(username);  // Indirect repository call
+        Route route = routeRepository.findById(request.getRouteId());
         
-        // 2. Load route entity
-        Route route = routeRepository.findById(request.getRouteId())
-                .orElseThrow(() -> new RuntimeException("Route not found"));
+        // Business logic
+        Reservation reservation = reservationFactory.createReservation(...);
         
-        // 3. Business Logic: Set passenger details with defaults
-        String passengerName = request.getPassengerName();
-        if (passengerName == null || passengerName.trim().isEmpty()) {
-            passengerName = user.getFirstName() + " " + user.getLastName();
-        }
-        
-        // 4. Create entity
-        Reservation reservation = new Reservation();
-        reservation.setUser(user);
-        reservation.setRoute(route);
-        reservation.setPassengerName(passengerName);
-        // ... set other fields
-        
-        // 5. Save via repository
-        Reservation saved = reservationRepository.save(reservation);
-        
-        // 6. Refresh to get denormalized fields from database triggers
-        return reservationRepository.findById(saved.getId()).orElseThrow(...);
-    }
-    
-    @Override
-    public List<Reservation> getMyReservations() {
-        // 1. Get current user
-        User user = userService.findByUsername(username);
-        
-        // 2. Use custom repository method
-        return reservationRepository.findByUserId(user.getId());
-    }
-    
-    @Override
-    public FareCalculationResponse calculateFare(...) {
-        // Call database function via repository
-        Map<String, Object> result = reservationRepository.calculateFare(...);
-        
-        // Transform result to DTO
-        return new FareCalculationResponse(...);
+        // Repository call
+        return reservationRepository.save(reservation);
     }
 }
 ```
 
-**Flow:**
+**Flow**: `Controller → Service → Multiple Repositories → Database`
+
+### 3.4 Pattern 4: Service-to-Service Communication
+
+**Service uses other services**:
+
+```java
+@Service
+public class ReservationServiceImpl implements ReservationService {
+    
+    private final FareCalculationService fareCalculationService;
+    
+    private void updateDenormalizedFields(Reservation reservation, Route route) {
+        // Use another service for calculation
+        FareCalculationResponse fare = fareCalculationService.calculateFare(...);
+        reservation.setBaseFare(fare.getBaseFare());
+        reservation.setVatAmount(fare.getVatAmount());
+        reservation.setTotalFare(fare.getTotalFare());
+    }
+}
 ```
-Controller → ReservationService.createReservation()
-    ↓
-    → UserService.findByUsername() [get authenticated user]
-    → RouteRepository.findById() [get route]
-    → Business logic [set defaults, validations]
-    → ReservationRepository.save() [persist]
-    → ReservationRepository.findById() [refresh with triggers]
-    ↓
-Database
+
+**Flow**: `Service A → Service B → Repository → Database`
+
+### 3.5 Pattern 5: Custom Query Usage
+
+**Service uses custom repository queries**:
+
+```java
+@Service
+public class FarePolicyServiceImpl implements FarePolicyService {
+    
+    @Override
+    public FarePolicy getActiveFarePolicy(...) {
+        // Uses custom JPQL query from repository
+        return farePolicyRepository.findActiveFarePolicy(...)
+                .orElseThrow(() -> new RuntimeException("Not found"));
+    }
+    
+    @Override
+    public void validateFarePolicy(FarePolicy farePolicy) {
+        // Uses custom query for validation
+        boolean hasOverlap = farePolicyRepository.existsOverlappingActivePolicy(...);
+        if (hasOverlap) {
+            throw new RuntimeException("Overlapping policy exists");
+        }
+    }
+}
 ```
+
+**Flow**: `Service → Repository (custom query) → Database`
 
 ---
 
 ## 4. Dependency Injection
 
-### How Services Get Repositories
+### 4.1 Constructor Injection Pattern
 
-Spring uses **Dependency Injection** to provide repositories to services:
+**All services use constructor injection**:
 
 ```java
 @Service
 public class ReservationServiceImpl implements ReservationService {
     
-    // Fields are marked as final (immutable)
+    // Final fields (immutable)
     private final ReservationRepository reservationRepository;
     private final RouteRepository routeRepository;
+    private final UserService userService;
     
     // Constructor injection (recommended)
     @Autowired
     public ReservationServiceImpl(
             ReservationRepository reservationRepository,
-            RouteRepository routeRepository) {
+            RouteRepository routeRepository,
+            UserService userService) {
         this.reservationRepository = reservationRepository;
         this.routeRepository = routeRepository;
+        this.userService = userService;
     }
 }
 ```
 
-### Why Constructor Injection?
-
-1. **Immutability**: Fields can be `final`
-2. **Testability**: Easy to mock in unit tests
-3. **Required Dependencies**: Compiler ensures all dependencies are provided
-4. **No Reflection**: Better performance than field injection
+**Benefits**:
+- ✅ Immutability: Fields can be `final`
+- ✅ Testability: Easy to mock in unit tests
+- ✅ Required Dependencies: Compiler ensures all dependencies are provided
+- ✅ No Reflection: Better performance than field injection
 
 ---
 
 ## 5. Transaction Management
 
-### Automatic Transactions
+### 5.1 Automatic Transactions
 
-Spring automatically manages transactions for service methods:
+**All services use `@Transactional`**:
 
 ```java
 @Service
-public class ReservationServiceImpl {
+@Transactional  // All methods run in a transaction
+public class ReservationServiceImpl implements ReservationService {
     
     @Override
     public Reservation createReservation(...) {
@@ -451,226 +814,117 @@ public class ReservationServiceImpl {
         // If any step fails, everything rolls back
         
         Route route = routeRepository.findById(...);
-        Reservation reservation = new Reservation(...);
+        Reservation reservation = reservationFactory.createReservation(...);
         return reservationRepository.save(reservation);
     }
 }
 ```
 
-### Transaction Behavior:
-
+**Transaction Behavior**:
 - **All or Nothing**: If any operation fails, the entire transaction rolls back
 - **Automatic**: No need to manually start/commit transactions
 - **Isolation**: Each transaction sees a consistent view of data
 
----
+### 5.2 Read-Only Transactions
 
-## 6. Custom Repository Queries
-
-### Method Name Queries (Automatic)
-
-```java
-// Spring generates: SELECT * FROM reservations WHERE user_id = ? AND status = ?
-List<Reservation> findByUserIdAndStatus(Long userId, String status);
-
-// Spring generates: SELECT * FROM stations WHERE name LIKE ?
-List<Station> findByNameContaining(String name);
-```
-
-### @Query Annotation (Custom SQL)
-
-```java
-@Query(value = "SELECT * FROM calculate_reservation_fare(:routeId, :passengerCategory, :seatCount, :reservationDate)", 
-       nativeQuery = true)
-Map<String, Object> calculateFare(
-        @Param("routeId") Integer routeId,
-        @Param("passengerCategory") String passengerCategory,
-        @Param("seatCount") Integer seatCount,
-        @Param("reservationDate") LocalDateTime reservationDate
-);
-```
-
-### JPQL Queries (Java Persistence Query Language)
-
-```java
-@Query("SELECT r FROM Reservation r WHERE r.user.id = :userId AND r.status = :status")
-List<Reservation> findUserReservationsByStatus(
-        @Param("userId") Long userId, 
-        @Param("status") String status
-);
-```
-
----
-
-## 7. Service Layer Patterns
-
-### Pattern 1: Pass-Through Service
-
-Simple services that just delegate to repositories:
-
-```java
-@Override
-public List<Station> getAllStations() {
-    return stationRepository.findAll();
-}
-```
-
-### Pattern 2: Business Logic Service
-
-Services that add validation and business rules:
-
-```java
-@Override
-public Route createRoute(CreateRouteRequest request) {
-    // Validation
-    if (origin.getId().equals(destination.getId())) {
-        throw new RuntimeException("Cannot create circular route");
-    }
-    
-    // Business logic
-    Route route = new Route(origin, destination, capacity);
-    return routeRepository.save(route);
-}
-```
-
-### Pattern 3: Orchestration Service
-
-Services that coordinate multiple repositories/services:
-
-```java
-@Override
-public Reservation createReservation(CreateReservationRequest request) {
-    // Coordinate multiple repositories
-    User user = userService.findByUsername(username);
-    Route route = routeRepository.findById(routeId);
-    
-    // Business logic
-    Reservation reservation = new Reservation();
-    reservation.setUser(user);
-    reservation.setRoute(route);
-    
-    // Save
-    return reservationRepository.save(reservation);
-}
-```
-
-### Pattern 4: Security-Aware Service
-
-Services that enforce access control:
-
-```java
-@Override
-public Reservation cancelReservation(Long reservationId) {
-    Reservation reservation = reservationRepository.findById(reservationId)
-            .orElseThrow(...);
-    
-    // Security check
-    if (!isAdmin && !reservation.getUser().getId().equals(currentUserId)) {
-        throw new RuntimeException("Access denied");
-    }
-    
-    reservation.setStatus("CANCELLED");
-    return reservationRepository.save(reservation);
-}
-```
-
-### Pattern 5: Inheritance-Aware Service
-
-Services that work with JPA inheritance to create different entity types:
+**Services that only read data use `@Transactional(readOnly = true)`**:
 
 ```java
 @Service
-public class UserServiceImpl implements UserService {
-    
-    private final UserRepository userRepository;
-    
-    @Override
-    public User register(RegisterRequest request) {
-        // Business logic: Create RegularUser (default type)
-        RegularUser user = new RegularUser(
-                request.getUsername(),
-                request.getEmail(),
-                passwordEncoder.encode(request.getPassword())
-        );
-        // Repository handles inheritance automatically
-        return userRepository.save(user);
-    }
+@Transactional(readOnly = true)  // Optimized for read operations
+public class FareCalculationServiceImpl implements FareCalculationService {
     
     @Override
-    public User createAdminUser(...) {
-        // Business logic: Create AdminUser (different type)
-        AdminUser adminUser = new AdminUser(
-                username,
-                email,
-                passwordEncoder.encode(password)
-        );
-        // Same repository, different entity subclass
-        return userRepository.save(adminUser);
-    }
-    
-    @Override
-    public User findByUsername(String username) {
-        // Repository returns correct subclass based on user_type
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(...);
-        
-        // user.getRole() returns "USER" or "ADMIN" based on subclass
-        return user;
+    public FareCalculationResponse calculateFare(...) {
+        // Read-only operations only
+        BigDecimal price = farePolicyService.getActiveFarePolicyPrice(...);
+        BigDecimal vatRate = vatRateService.getVatRateForDate(...);
+        // ... calculations (no database writes)
     }
 }
 ```
 
-**Key Points:**
-- Service creates specific subclasses, not base class
-- Repository defined for base class handles all subclasses
-- JPA automatically manages discriminator column
-- Queries return correct subclass instances
+**Benefits**:
+- Performance optimization (database can optimize for read-only)
+- Clear intent (service doesn't modify data)
 
 ---
 
-## 8. Benefits of Repository-Service Pattern
+## 6. Query Method Patterns
 
-### 1. Separation of Concerns
-- **Repository**: Data access only
-- **Service**: Business logic only
-- **Controller**: HTTP handling only
+### 6.1 Method Name Derivation
 
-### 2. Testability
+**Spring Data JPA generates SQL from method names**:
+
 ```java
-// Easy to mock repositories in unit tests
-@Test
-void testCreateReservation() {
-    ReservationRepository mockRepo = mock(ReservationRepository.class);
-    ReservationService service = new ReservationServiceImpl(mockRepo, ...);
-    // Test business logic without database
-}
+// Repository
+List<Reservation> findByRouteId(Long routeId);
+// → SQL: SELECT * FROM reservations WHERE route_id = ?
+
+Optional<User> findByUsername(String username);
+// → SQL: SELECT * FROM users WHERE username = ?
+
+boolean existsByEmail(String email);
+// → SQL: SELECT COUNT(*) > 0 FROM users WHERE email = ?
 ```
 
-### 3. Reusability
-- Services can be used by multiple controllers
-- Repositories can be used by multiple services
+**Naming Convention**:
+- `findBy` + PropertyName → `WHERE property = ?`
+- `findBy` + Property1 + `And` + Property2 → `WHERE property1 = ? AND property2 = ?`
+- `existsBy` + PropertyName → `SELECT COUNT(*) > 0 WHERE property = ?`
 
-### 4. Maintainability
-- Changes to database structure only affect repositories
-- Business logic changes only affect services
+### 6.2 Custom JPQL Queries
 
-### 5. Transaction Management
-- Spring automatically manages transactions at service level
-- Ensures data consistency
+**Type-safe queries using entity names and properties**:
 
-### 6. Code Reduction
-- No SQL writing (Spring Data JPA generates it)
-- No boilerplate CRUD code
-- Focus on business logic
+```java
+@Query("SELECT f FROM FarePolicy f WHERE f.route.id = :routeId " +
+       "AND f.passengerCategory = :category " +
+       "AND f.status = :status " +
+       "AND f.effectiveFrom <= :date " +
+       "AND (f.effectiveTo IS NULL OR f.effectiveTo > :date)")
+Optional<FarePolicy> findActiveFarePolicy(
+        @Param("routeId") Long routeId,
+        @Param("category") PassengerCategory category,
+        @Param("status") PolicyStatus status,
+        @Param("date") LocalDate date
+);
+```
+
+**Benefits**:
+- Type-safe (uses entity names, not table names)
+- Compile-time validation
+- Database-agnostic (works with any JPA-compliant database)
+
+### 6.3 Entity Graph (Eager Loading)
+
+**Prevents N+1 query problem**:
+
+```java
+@EntityGraph(attributePaths = "entries")
+List<RouteTimetable> findByRouteId(Long routeId);
+// → Loads RouteTimetable and RouteTimetableEntry in single query
+```
+
+**Usage**: When you need to access child entities, use `@EntityGraph` to load them eagerly.
 
 ---
 
-## 9. Complete Flow Example
+## 7. Complete Flow Examples
 
-### Creating a Reservation - Full Stack Trace
+### 7.1 Creating a Reservation - Full Stack Trace
 
 ```
 1. HTTP POST /api/reservations
+   Request Body: {
+     "routeId": 1,
+     "passengerName": "John Doe",
+     "seatCount": 2,
+     "departureTime": "2025-01-15T10:00:00",
+     "arrivalTime": "2025-01-15T11:30:00",
+     "passengerCategory": "ADULT",
+     "vehicleClass": "STANDARD"
+   }
    ↓
 2. ReservationController.createReservation(request)
    ↓
@@ -685,31 +939,55 @@ void testCreateReservation() {
    ├─→ RouteRepository.findById(routeId)
    │   └─→ SQL: SELECT * FROM routes WHERE id = ?
    │
+   ├─→ SeatAvailabilityService.checkSeatAvailability(...)
+   │   └─→ ReservationRepository.findByRouteId(...)
+   │       └─→ SQL: SELECT * FROM reservations WHERE route_id = ?
+   │   └─→ Business logic: Calculate available seats
+   │
    ├─→ Business Logic:
-   │   - Set passenger defaults
-   │   - Validate data
-   │   - Create Reservation object
+   │   - Validate time constraints
+   │   - Create Reservation using ReservationFactory
+   │
+   ├─→ FareCalculationService.calculateFare(...)
+   │   ├─→ FarePolicyService.getActiveFarePolicyPrice(...)
+   │   │   └─→ FarePolicyRepository.findActiveFarePolicy(...)
+   │   │       └─→ SQL: SELECT * FROM fare_policies WHERE ...
+   │   └─→ VatRateService.getVatRateForDate(...)
+   │       └─→ VatRateRepository.findActiveVatRateForDate(...)
+   │           └─→ SQL: SELECT * FROM vat_rates WHERE ...
+   │   └─→ Business logic: Calculate base fare, VAT, total
+   │
+   ├─→ updateDenormalizedFields(reservation, route)
+   │   - Sets originStationName, destinationStationName
+   │   - Sets baseFare, vatAmount, totalFare
    │
    └─→ ReservationRepository.save(reservation)
        └─→ SQL: INSERT INTO reservations (...) VALUES (...)
-       └─→ Database triggers fire
+       └─→ BaseEntityListener.prePersist() sets createdAt, updatedAt
        └─→ Returns saved entity with ID
    ↓
-4. ReservationRepository.findById(savedId) [refresh]
-   └─→ SQL: SELECT * FROM reservations WHERE id = ?
-   └─→ Returns entity with denormalized fields
+4. recordStatusHistory(saved, null, ReservationStatus.CONFIRMED, "Reservation created")
+   └─→ ReservationStatusHistoryRepository.save(history)
+       └─→ SQL: INSERT INTO reservation_status_history (...) VALUES (...)
    ↓
-5. Return Reservation to Controller
+5. Return Reservation object to controller
    ↓
 6. Serialize to JSON
    ↓
 7. HTTP 201 Created Response
 ```
 
-### Registering a User - Full Stack Trace (with Inheritance)
+### 7.2 Registering a User - Full Stack Trace (with JPA Inheritance)
 
 ```
 1. HTTP POST /api/auth/register
+   Request Body: {
+     "username": "john",
+     "email": "john@example.com",
+     "password": "password123",
+     "firstName": "John",
+     "lastName": "Doe"
+   }
    ↓
 2. AuthController.register(request)
    ↓
@@ -722,14 +1000,16 @@ void testCreateReservation() {
    │   └─→ SQL: SELECT COUNT(*) > 0 FROM users WHERE email = ?
    │
    ├─→ Business Logic:
-   │   - Create RegularUser instance (subclass of User)
-   │   - Set fields from request
-   │   - Encode password
+   │   - UserFactory.createRegularUser(...)
+   │   - Creates RegularUser instance (subclass of User)
+   │   - Encodes password
+   │   - Sets fields from request
    │
    └─→ UserRepository.save(regularUser)
        └─→ JPA detects RegularUser subclass
        └─→ SQL: INSERT INTO users (..., user_type, role) VALUES (..., 'USER', 'USER')
-       └─→ JPA automatically sets user_type discriminator
+       └─→ JPA automatically sets user_type discriminator = 'USER'
+       └─→ BaseEntityListener.prePersist() sets createdAt, updatedAt
        └─→ Returns saved RegularUser instance
    ↓
 4. Generate JWT token
@@ -739,57 +1019,116 @@ void testCreateReservation() {
 6. HTTP 201 Created Response
 ```
 
+### 7.3 Creating a Fare Policy - Full Stack Trace
+
+```
+1. HTTP POST /api/fare-policies
+   Request Body: {
+     "routeId": 1,
+     "passengerCategory": "ADULT",
+     "vehicleClass": "STANDARD",
+     "price": 50.00,
+     "effectiveFrom": "2025-01-01",
+     "effectiveTo": null,
+     "status": "ACTIVE"
+   }
+   ↓
+2. FarePolicyController.createFarePolicy(request)
+   ↓
+3. FarePolicyService.saveFarePolicy(farePolicy)
+   ↓
+   ├─→ FarePolicyService.validateFarePolicy(farePolicy)
+   │   ├─→ Business validation: Check date range
+   │   │   if (effectiveTo != null && !effectiveTo.isAfter(effectiveFrom)) {
+   │   │       throw new RuntimeException("Invalid date range");
+   │   │   }
+   │   │
+   │   └─→ Business validation: Check for overlapping policies
+   │       └─→ FarePolicyRepository.existsOverlappingActivePolicy(...)
+   │           └─→ SQL: SELECT COUNT(*) > 0 FROM fare_policies WHERE ...
+   │           └─→ Returns true if overlap exists
+   │       if (hasOverlap) {
+   │           throw new RuntimeException("Overlapping policy exists");
+   │       }
+   │
+   └─→ FarePolicyRepository.save(farePolicy)
+       └─→ SQL: INSERT INTO fare_policies (...) VALUES (...)
+       └─→ BaseEntityListener.prePersist() sets createdAt, updatedAt
+       └─→ FarePolicyHistoryListener.onFarePolicyCreated(...)
+           └─→ FarePolicyHistoryRepository.save(history)
+               └─→ SQL: INSERT INTO fare_policy_history (...) VALUES (...)
+       └─→ Returns saved FarePolicy entity
+   ↓
+4. Return FarePolicy object to controller
+   ↓
+5. Serialize to JSON
+   ↓
+6. HTTP 201 Created Response
+```
+
 ---
 
-## 10. Best Practices
+## 8. Key Patterns and Best Practices
 
-### Repository Best Practices:
+### 8.1 Repository Best Practices
 
 1. **Keep Repositories Simple**: Only data access, no business logic
 2. **Use Method Naming**: Let Spring generate queries automatically
 3. **Custom Queries When Needed**: Use `@Query` for complex queries
 4. **Return Appropriate Types**: `Optional<T>` for single results, `List<T>` for collections
+5. **Use Entity Graph**: Prevent N+1 queries when loading relationships
 
-### Service Best Practices:
+### 8.2 Service Best Practices
 
 1. **One Service Per Domain**: `ReservationService`, `RouteService`, etc.
 2. **Business Logic Only**: No HTTP concerns, no database details
 3. **Use Other Services**: Services can call other services
 4. **Handle Exceptions**: Convert database exceptions to business exceptions
 5. **Validate Input**: Check business rules before saving
+6. **Use Factories**: Encapsulate entity creation logic
+7. **Service Layer Validation**: All validation moved from database to service layer
 
-### Dependency Injection Best Practices:
+### 8.3 Dependency Injection Best Practices
 
 1. **Constructor Injection**: Preferred over field injection
 2. **Final Fields**: Make repository fields `final` for immutability
 3. **Interface-Based**: Depend on interfaces, not implementations
 
+### 8.4 Transaction Management Best Practices
+
+1. **Service-Level Transactions**: Use `@Transactional` on service classes
+2. **Read-Only Transactions**: Use `@Transactional(readOnly = true)` for query-only services
+3. **Transaction Boundaries**: One transaction per service method
+
 ---
 
-## Summary
+## 9. Summary
 
-The Repository-Service pattern provides:
+The Repository-Service implementation provides:
 
-- **Repositories**: Data access layer (Spring Data JPA)
-  - Automatic CRUD operations
-  - Query method generation
-  - Custom queries when needed
-  - **JPA Inheritance Support**: Repositories work seamlessly with inherited entities
+### Repositories (13 total)
+- **Spring Data JPA**: Automatic CRUD operations
+- **Query Method Generation**: SQL generated from method names
+- **Custom Queries**: JPQL for complex queries
+- **JPA Inheritance Support**: Repositories work seamlessly with inherited entities
+- **Entity Graph**: Eager loading to prevent N+1 queries
 
-- **Services**: Business logic layer
-  - Orchestrates repositories
-  - Enforces business rules
-  - Manages transactions
-  - Handles security
-  - **Creates Entity Subclasses**: Services instantiate specific subclasses (e.g., `RegularUser`, `AdminUser`)
+### Services (11 total)
+- **Business Logic**: Validation, calculations, workflows
+- **Orchestration**: Coordinates multiple repositories
+- **Transaction Management**: Ensures data consistency
+- **Service-to-Service Communication**: Services can use other services
+- **Factory Pattern**: Encapsulates entity creation
+- **Service Layer Validation**: All validation moved from database triggers
 
-- **JPA Inheritance Integration**:
-  - Repositories defined for base classes handle all subclasses
-  - Services create specific subclasses based on business logic
-  - JPA automatically manages discriminator columns
-  - Queries return correct subclass instances
+### Key Features
+- ✅ **Separation of Concerns**: Repository (data access) vs Service (business logic)
+- ✅ **Testability**: Easy to mock repositories in unit tests
+- ✅ **Type Safety**: JPQL queries use entity names, not table names
+- ✅ **Automatic CRUD**: No boilerplate code for standard operations
+- ✅ **Transaction Management**: Automatic transaction boundaries
+- ✅ **JPA Inheritance**: Seamless support for entity inheritance
+- ✅ **No Database Triggers**: All business logic in service layer
 
-- **Benefits**: Clean architecture, testability, maintainability, and reduced boilerplate code
-
-This pattern is the foundation of the application's data persistence and business logic implementation, including support for JPA inheritance strategies like the `SINGLE_TABLE` approach used for the `User` entity hierarchy.
+This architecture provides a clean, maintainable, and testable foundation for the application's data persistence and business logic implementation.
 

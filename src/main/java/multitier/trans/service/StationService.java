@@ -21,4 +21,23 @@ public interface StationService {
      * @return A list of all Station objects.
      */
     List<Station> getAllStations();
+
+    /**
+     * Updates a station with validation.
+     * Validates status changes and updates denormalized fields if station name changes.
+     * 
+     * @param station The station to update
+     * @return The updated station
+     * @throws RuntimeException if validation fails
+     */
+    Station updateStation(Station station);
+
+    /**
+     * Deletes a station with validation.
+     * Prevents deletion if the station is used in routes.
+     * 
+     * @param stationId The ID of the station to delete
+     * @throws RuntimeException if the station cannot be deleted
+     */
+    void deleteStation(Long stationId);
 }

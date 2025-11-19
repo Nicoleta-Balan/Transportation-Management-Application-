@@ -2,13 +2,11 @@ package multitier.trans.service;
 
 import multitier.trans.dto.RegisterRequest;
 import multitier.trans.model.User;
-import multitier.trans.model.RegularUser;
-import multitier.trans.model.AdminUser;
+import multitier.trans.factory.UserFactory;
 import multitier.trans.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,12 +16,12 @@ import java.time.LocalDateTime;
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
+    private final UserFactory userFactory;
 
     @Autowired
-    public UserServiceImpl(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    public UserServiceImpl(UserRepository userRepository, UserFactory userFactory) {
         this.userRepository = userRepository;
-        this.passwordEncoder = passwordEncoder;
+        this.userFactory = userFactory;
     }
 
     @Override
@@ -39,17 +37,16 @@ public class UserServiceImpl implements UserService {
             throw new RuntimeException("Email already exists: " + request.getEmail());
         }
 
-        // Create new RegularUser (default user type)
-        // Using inheritance - RegularUser extends User
-        RegularUser user = new RegularUser(
+        // Use Factory to create RegularUser
+        // Factory encapsulates creation logic and password encoding
+        User user = userFactory.createRegularUser(
                 request.getUsername(),
                 request.getEmail(),
-                passwordEncoder.encode(request.getPassword())
+                request.getPassword(),
+                request.getFirstName(),
+                request.getLastName(),
+                request.getPhone()
         );
-        user.setFirstName(request.getFirstName());
-        user.setLastName(request.getLastName());
-        user.setPhone(request.getPhone());
-        user.setEnabled(true);
 
         return userRepository.save(user);
     }
@@ -79,15 +76,15 @@ public class UserServiceImpl implements UserService {
             throw new RuntimeException("Email already exists: " + email);
         }
 
-        // Create AdminUser using inheritance
-        AdminUser adminUser = new AdminUser(
+        // Use Factory to create AdminUser
+        // Factory encapsulates creation logic and password encoding
+        User adminUser = userFactory.createAdminUser(
                 username,
                 email,
-                passwordEncoder.encode(password)
+                password,
+                firstName,
+                lastName
         );
-        adminUser.setFirstName(firstName);
-        adminUser.setLastName(lastName);
-        adminUser.setEnabled(true);
 
         return userRepository.save(adminUser);
     }

@@ -45,7 +45,11 @@ public class TimetableServiceImpl implements TimetableService {
         timetable.setDescription(request.getDescription());
         timetable.setEffectiveFrom(request.getEffectiveFrom());
         timetable.setEffectiveTo(request.getEffectiveTo());
-        timetable.setStatus(request.getStatus() == null ? "ACTIVE" : request.getStatus());
+        // Convert String status from DTO to enum, default to ACTIVE if null
+        multitier.trans.model.enums.TimetableStatus status = (request.getStatus() == null || request.getStatus().isEmpty()) 
+            ? multitier.trans.model.enums.TimetableStatus.ACTIVE 
+            : multitier.trans.model.enums.TimetableStatus.valueOf(request.getStatus().toUpperCase());
+        timetable.setStatus(status);
 
         if (request.getEntries() != null) {
             for (RouteTimetableEntryRequest entryRequest : request.getEntries()) {
@@ -114,7 +118,7 @@ public class TimetableServiceImpl implements TimetableService {
         response.setDescription(timetable.getDescription());
         response.setEffectiveFrom(timetable.getEffectiveFrom());
         response.setEffectiveTo(timetable.getEffectiveTo());
-        response.setStatus(timetable.getStatus());
+        response.setStatus(timetable.getStatus() != null ? timetable.getStatus().name() : null);
 
         List<RouteTimetableEntryResponse> entryResponses = timetable.getEntries() == null
                 ? new ArrayList<>()

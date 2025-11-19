@@ -4,8 +4,11 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
 import multitier.trans.model.enums.PassengerCategory;
+import multitier.trans.model.enums.PolicyStatus;
 import multitier.trans.model.enums.VehicleClass;
+import multitier.trans.model.converter.PolicyStatusConverter;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
 /**
  * Domain Model: Fare Policy & Cost.
@@ -14,6 +17,7 @@ import java.math.BigDecimal;
  */
 @Entity
 @Table(name = "fare_policies")
+@EntityListeners(FarePolicyHistoryListener.class)
 public class FarePolicy {
 
     @Id
@@ -44,9 +48,34 @@ public class FarePolicy {
     @Column(name = "base_price", nullable = false)
     private BigDecimal price;
 
+    @NotNull(message = "Effective from date cannot be null")
+    @Column(name = "effective_from", nullable = false)
+    private LocalDate effectiveFrom;
+
+    @Column(name = "effective_to")
+    private LocalDate effectiveTo;
+
+    @NotNull(message = "Status cannot be null")
+    @Convert(converter = PolicyStatusConverter.class)
+    @Column(nullable = false, length = 20)
+    private PolicyStatus status = PolicyStatus.ACTIVE;
+
     // --- Constructors ---
 
     public FarePolicy() {
+    }
+
+    /**
+     * Checks if this fare policy is active at the given date.
+     */
+    public boolean isActiveAt(java.time.LocalDateTime date) {
+        if (date == null) {
+            date = java.time.LocalDateTime.now();
+        }
+        LocalDate checkDate = date.toLocalDate();
+        return PolicyStatus.ACTIVE.equals(status) &&
+               !checkDate.isBefore(effectiveFrom) &&
+               (effectiveTo == null || !checkDate.isAfter(effectiveTo));
     }
 
     // --- Getters and Setters ---
@@ -89,5 +118,29 @@ public class FarePolicy {
 
     public void setPrice(BigDecimal price) {
         this.price = price;
+    }
+
+    public LocalDate getEffectiveFrom() {
+        return effectiveFrom;
+    }
+
+    public void setEffectiveFrom(LocalDate effectiveFrom) {
+        this.effectiveFrom = effectiveFrom;
+    }
+
+    public LocalDate getEffectiveTo() {
+        return effectiveTo;
+    }
+
+    public void setEffectiveTo(LocalDate effectiveTo) {
+        this.effectiveTo = effectiveTo;
+    }
+
+    public PolicyStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(PolicyStatus status) {
+        this.status = status;
     }
 }

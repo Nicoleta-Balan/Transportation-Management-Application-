@@ -41,9 +41,13 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
     List<Reservation> findByPassengerName(String passengerName);
 
     /**
+     * @deprecated This method is deprecated. Use FareCalculationService.calculateFare() instead.
+     * This method is kept for backward compatibility but should not be used in new code.
+     * 
      * Calls the PostgreSQL function calculate_reservation_fare to get fare breakdown.
      * This allows the UI to display fare before saving the reservation.
      */
+    @Deprecated
     @Query(value = "SELECT * FROM calculate_reservation_fare(:routeId, :passengerCategory, :seatCount, :reservationDate)", nativeQuery = true)
     Map<String, Object> calculateFare(
             @Param("routeId") Integer routeId,
