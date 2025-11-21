@@ -1,12 +1,23 @@
 package multitier.trans.model.enums;
 
-/**
- * Represents the type/class of vehicle (bus).
- * These values are logical for a bus transportation system.
- */
+// Vehicle models
+// A vehicle model is assigned per route
+// A seat capacity is assigned per vehicle
+// When creating a route, seat capacity is taken from this enum
+
 public enum VehicleClass {
-    STANDARD,       // A standard intercity bus
-    COACH,          // A long-distance, higher-comfort bus
-    MINI_BUS,       // A smaller van or shuttle
-    DOUBLE_DECKER   //two-level bus
+    STANDARD(50),
+    COACH(60),
+    MINI_BUS(20),
+    DOUBLE_DECKER(80);
+
+    private final int seatCapacity;
+
+    VehicleClass(int seatCapacity) {
+        this.seatCapacity = seatCapacity;
+    }
+
+    public int getSeatCapacity() {
+        return seatCapacity;
+    }
 }

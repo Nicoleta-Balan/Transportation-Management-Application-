@@ -41,7 +41,7 @@ public class FarePolicy {
     @NotNull
     @Min(value = 0, message = "Price cannot be negative")
     @Column(nullable = false)
-    private Double price;
+    private Double price; //Intended as base price per trip
 
     // --- Constructors ---
 
