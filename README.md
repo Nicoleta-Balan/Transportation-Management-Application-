@@ -101,7 +101,7 @@ npm install
 Start the development server:
 npm run dev
 
-The frontend application will be accessible at http://localhost:5173.
+The frontend application will be accessible at http://localhost:3000.
 
-Open API: http://localhost:8085/v3/api-docs
+Open API: http://localhost:8085/v3/api-docs<br>
 Swagger: http://localhost:8085/swagger-ui/index.html
