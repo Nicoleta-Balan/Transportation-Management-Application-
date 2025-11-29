@@ -11,9 +11,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-/**
- * API Controller ("The Gate") for handling all Reservation requests.
- */
 
 @RestController
 @RequestMapping("/api/reservations")
@@ -26,10 +23,6 @@ public class ReservationController {
         this.reservationService = reservationService;
     }
 
-    /**
-     * Endpoint for: Reservation Creation
-     * POST /api/reservations
-     */
 
     @PostMapping
     public ResponseEntity<Reservation> createReservation(@Valid @RequestBody CreateReservationRequest request) {
@@ -37,11 +30,6 @@ public class ReservationController {
         return new ResponseEntity<>(newReservation, HttpStatus.CREATED); // 201 Created
     }
 
-    /**
-     * Reservation Cancellation
-     * PUT /api/reservations/{id}/cancel
-     * (We use PUT or PATCH for updates)
-     */
 
     @PutMapping("/{id}/cancel")
     public ResponseEntity<Reservation> cancelReservation(@PathVariable Long id) {
@@ -49,20 +37,13 @@ public class ReservationController {
         return ResponseEntity.ok(cancelledReservation); // 200 OK
     }
 
-    /**
-     * GET /api/reservations
-     * Gets all reservations.
-     */
 
     @GetMapping
     public List<Reservation> getAllReservations() {
         return reservationService.getAllReservations();
     }
 
-    /**
-     * GET /api/reservations/{id}
-     * Gets a single reservation by its ID.
-     */
+
     @GetMapping("/{id}")
     public ResponseEntity<Reservation> getReservationById(@PathVariable Long id) {
         return reservationService.getReservationById(id)

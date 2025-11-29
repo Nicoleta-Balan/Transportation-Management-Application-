@@ -27,11 +27,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 /**
  * Implements Junit Test for Reservation/Cancellation Service.
- *
- * This test validates the ReservationController, ensuring that:
- * 1. Valid reservations can be created
- * 2. Reservations can be cancelled
- * 3. Invalid data (like a missing passenger name) is rejected.
  */
 
 @WebMvcTest(ReservationController.class) // Tell Spring to only test the Controller layer
@@ -72,6 +67,7 @@ public class ReservationControllerTest {
     /**
      * Test for Reservation Creation (Happy Path)
      */
+
     @Test
     public void whenCreateReservation_withValidData_thenReturns201Created() throws Exception {
         // 1. Arrange (Set up the test)
@@ -131,9 +127,9 @@ public class ReservationControllerTest {
     }
 
     /**
-     * Test for Validation (part of SCRUM-29)
-     * Checks if the API rejects a request with invalid data (e.g., blank passenger name)
+     * Test for Validation that checks if the API rejects a request with invalid data (e.g., blank passenger name)
      */
+
     @Test
     public void whenCreateReservation_withInvalidData_thenReturns400BadRequest() throws Exception {
         // 1. Arrange
@@ -145,7 +141,6 @@ public class ReservationControllerTest {
         request.setDepartureTime(testDeparture);
         request.setArrivalTime(testArrival);
 
-        // 2. Act & 3. Assert
         mockMvc.perform(post("/api/reservations")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))

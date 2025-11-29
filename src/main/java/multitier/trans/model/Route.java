@@ -1,38 +1,26 @@
 package multitier.trans.model;
-
-import jakarta.persistence.*; // New imports
-
-
-/**
- * Implements Domain Model Implementation: Station & Route.
- * This entity is now updated to use Station objects instead of simple Strings,
- * creating a proper relational model.
- */
+import jakarta.persistence.*;
 
 @Entity
-@Table(name = "routes")
+@Table(name = "routes") // table name in the DB, marked class as JPA entity
 public class Route {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.IDENTITY) // represents the primary key
     private Long id;
 
-    // MODIFICATION: Using a Many-to-One relationship to the Station entity
-    @ManyToOne
-    @JoinColumn(name = "origin_station_id", nullable = false) // The column name in the DB
+    @ManyToOne // relation between routes and stations - origin station
+    @JoinColumn(name = "origin_station_id", nullable = false)
     private Station originStation;
 
-    // MODIFICATION: Using a Many-to-One relationship to the Station entity
-    @ManyToOne
-    @JoinColumn(name = "destination_station_id", nullable = false) // The column name in the DB
+
+    @ManyToOne // relation between routes and stations - destination station
+    @JoinColumn(name = "destination_station_id", nullable = false)
     private Station destinationStation;
 
-    @Column(nullable = false) // Added a constraint
+    @Column(nullable = false) // null values are not allowed
     private int vehicleCapacity;
 
-    // --- Constructors ---
-
-    // Empty constructor required by JPA
     public Route() {
     }
 
@@ -42,7 +30,6 @@ public class Route {
         this.destinationStation = destinationStation;
         this.vehicleCapacity = vehicleCapacity;
     }
-    // --- Getters and Setters ---
 
     public Long getId() {
         return id;

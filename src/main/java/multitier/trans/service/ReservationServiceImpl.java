@@ -12,10 +12,7 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Optional;
 
-/**
- * Service Implementation ("The Brain") for Reservation logic.
- * Implements the workflows for SCRUM-26 and SCRUM-27.
- */
+
 @Service
 public class ReservationServiceImpl implements ReservationService {
 

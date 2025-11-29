@@ -10,10 +10,9 @@ import java.util.List;
 
 /**
  * REST Controller to handle HTTP requests for managing routes (the API endpoints).
- *
- * - This controller now depends on the 'RouteService' (the business logic layer)
+ * This controller now depends on the 'RouteService' (the business logic layer)
  * instead of directly on the 'RouteRepository'.
- * - The create endpoint now accepts a 'CreateRouteRequest' DTO.
+ * The create endpoint now accepts a 'CreateRouteRequest' DTO.
  */
 
 @RestController
@@ -21,6 +20,7 @@ import java.util.List;
 public class RouteController {
 
     //The controller now depends on the Service layer, not the repository.
+
     @Autowired
     private RouteService routeService;
 

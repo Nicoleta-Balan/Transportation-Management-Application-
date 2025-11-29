@@ -9,20 +9,17 @@ import jakarta.persistence.Column;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
-/**
- * Represents a transport station (e.g., bus station, train station).
- */
 @Entity
 @Table(name = "stations")
 public class Station {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.IDENTITY) // represents the primary key
     private Long id;
 
     @NotNull(message = "Station name cannot be null")
     @Size(min = 2, max = 100, message = "Station name must be between 2 and 100 characters")
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false, unique = true) // null values are not allowed / unique values are required
     private String name;
 
     @Size(max = 255, message = "Description must be less than 255 characters")
@@ -33,7 +30,7 @@ public class Station {
     @Column(nullable = false)
     private String status;
 
-    public Station() {
+    public Station() { // default constructor
     }
 
     public Station(String name, String description, String status) {
@@ -41,8 +38,6 @@ public class Station {
         this.description = description;
         this.status = status;
     }
-
-    // --- Getters and Setters ---
 
     public Long getId() {
         return id;

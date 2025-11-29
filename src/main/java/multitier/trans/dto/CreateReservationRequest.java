@@ -27,7 +27,7 @@ public class CreateReservationRequest {
     @NotNull(message = "Arrival time cannot be null")
     private LocalDateTime arrivalTime;
 
-    // --- Getters and Setters ---
+
 
     public Long getRouteId() {
         return routeId;

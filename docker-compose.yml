@@ -40,8 +40,7 @@ services:
   frontend:
     image: tms_frontend_image
     build:
-      # The build context is the directory containing the Dockerfile and the Frontend folder.
-      context: .
+      context: ./FrontEnd/vite-project
       dockerfile: Dockerfile
     container_name: tms_frontend_app
     # Map host port 3000 to the container's NGINX port 80
