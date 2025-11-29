@@ -30,7 +30,7 @@ Database (Data Layer) – PostgreSQL for persistent data storage (Port 5438)
 C4 Diagram (Level 2: Containers)
 
 This is the logical blueprint of how the system components interact.
-
+```
 +-------------------------------------------------------------+
 | User (Dispatcher) [Actor]                                   |
 |                                                             |
@@ -63,7 +63,7 @@ This is the logical blueprint of how the system components interact.
 | |                                                         | |
 | +---------------------------------------------------------+ |
 +-------------------------------------------------------------+
-
+```
 
 Deliverables
 
@@ -102,3 +102,6 @@ Start the development server:
 npm run dev
 
 The frontend application will be accessible at http://localhost:5173.
+
+Open API: http://localhost:8085/v3/api-docs
+Swagger: http://localhost:8085/swagger-ui/index.html
