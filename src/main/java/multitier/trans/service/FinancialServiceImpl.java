@@ -2,6 +2,7 @@ package multitier.trans.service;
 
 import multitier.trans.model.FarePolicy;
 import multitier.trans.model.Reservation;
+import multitier.trans.model.enums.ReservationStatus;
 import multitier.trans.repository.FarePolicyRepository;
 import multitier.trans.repository.ReservationRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,7 +40,7 @@ public class FinancialServiceImpl implements FinancialService {
         for (Reservation res : allReservations) {
 
 
-            if ("CONFIRMED".equalsIgnoreCase(res.getStatus())) {
+            if (res.getStatus() == ReservationStatus.CONFIRMED) {
 
                 Optional<FarePolicy> policy = farePolicyRepository.findByRouteIdAndPassengerCategoryAndVehicleClass(
                         res.getRoute().getId(),

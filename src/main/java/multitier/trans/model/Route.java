@@ -1,6 +1,8 @@
 package multitier.trans.model;
 
 import jakarta.persistence.*; // New imports
+import jakarta.validation.constraints.NotNull;
+import multitier.trans.model.enums.VehicleClass;
 
 
 /**
@@ -27,6 +29,11 @@ public class Route {
     @JoinColumn(name = "destination_station_id", nullable = false) // The column name in the DB
     private Station destinationStation;
 
+    @NotNull(message = "Vehicle class cannot be null")
+    @Enumerated(EnumType.STRING)
+    @Column(name = "vehicle_class", nullable = false)
+    private VehicleClass vehicleClass;
+    
     @Column(nullable = false) // Added a constraint
     private int vehicleCapacity;
 
@@ -36,11 +43,11 @@ public class Route {
     public Route() {
     }
 
-    // Constructor to use Station objects
-    public Route(Station originStation, Station destinationStation, int vehicleCapacity) {
+    public Route(Station originStation, Station destinationStation, VehicleClass vehicleClass) {
         this.originStation = originStation;
         this.destinationStation = destinationStation;
-        this.vehicleCapacity = vehicleCapacity;
+        this.vehicleClass = vehicleClass;
+        this.vehicleCapacity = vehicleClass != null ? vehicleClass.getSeatCapacity() : 0;
     }
     // --- Getters and Setters ---
 
@@ -74,5 +81,17 @@ public class Route {
 
     public void setVehicleCapacity(int vehicleCapacity) {
         this.vehicleCapacity = vehicleCapacity;
+    }
+
+    public VehicleClass getVehicleClass() {
+        return vehicleClass;
+    }
+
+    public void setVehicleClass(VehicleClass vehicleClass) {
+        this.vehicleClass = vehicleClass;
+        // Automatically update capacity when vehicle class is set
+        if (vehicleClass != null) {
+            this.vehicleCapacity = vehicleClass.getSeatCapacity();
+        }
     }
 }

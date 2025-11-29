@@ -1,5 +1,6 @@
 package multitier.trans.service;
 
+import multitier.trans.dto.CreateStationRequest;
 import multitier.trans.model.Station;
 import multitier.trans.repository.StationRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,13 +23,16 @@ public class StationServiceImpl implements StationService {
     }
 
     /**
-     * Saves the station. The validation (@Size, @NotNull)
-     * will be triggered automatically by @Valid in the controller.
+     * Creates a new station from the DTO request.
+     * The validation (@Size, @NotNull) will be triggered automatically by @Valid in the controller.
      */
-
     @Override
-    public Station createStation(Station station) {
-        return stationRepository.save(station);
+    public Station createStation(CreateStationRequest request) {
+        Station newStation = new Station();
+        newStation.setName(request.getName());
+        newStation.setDescription(request.getDescription());
+        newStation.setStatus(request.getStatus());
+        return stationRepository.save(newStation);
     }
 
     @Override

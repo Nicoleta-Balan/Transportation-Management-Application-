@@ -66,8 +66,8 @@ public class RouteServiceImpl implements RouteService { // Implementează interf
             throw new RuntimeException("Origin and destination stations cannot be the same.");
         }
 
-        // Create the new object Route
-        Route newRoute = new Route(origin, destination, request.getVehicleCapacity());
+        // Create the new object Route using VehicleClass to derive seat capacity
+        Route newRoute = new Route(origin, destination, request.getVehicleClass());
 
         // Save it in the database
         return routeRepository.save(newRoute);

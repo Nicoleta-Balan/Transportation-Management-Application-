@@ -1,5 +1,6 @@
 package multitier.trans.controllers;
 
+import multitier.trans.dto.CreateStationRequest;
 import multitier.trans.model.Station;
 import multitier.trans.service.StationService;
 import jakarta.validation.Valid;
@@ -9,10 +10,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-/**
- * API Endpoint (Controller) for managing Stations.
- * (a service that adds a new station).
- */
 
 @RestController
 @RequestMapping("/api/stations")
@@ -25,23 +22,15 @@ public class StationController {
         this.stationService = stationService;
     }
 
-    /**
-     * POST /api/stations
-     * Creates a new station.
-     * @Valid triggers the validation rules (@Size, @NotNull) in the Station class.
-     * If validation fails, it automatically returns a 400 Bad Request.
-     */
+    // @Valid triggers the validation rules (@Size, @NotNull) in the CreateStationRequest DTO
+    // If validation fails => 400 Bad Request
     @PostMapping
-    public ResponseEntity<Station> createStation(@Valid @RequestBody Station station) {
-        Station createdStation = stationService.createStation(station);
+    public ResponseEntity<Station> createStation(@Valid @RequestBody CreateStationRequest request) {
+        Station createdStation = stationService.createStation(request);
         // Return 201 Created
         return ResponseEntity.status(201).body(createdStation);
     }
 
-    /**
-     * GET /api/stations
-     * Gets all stations.
-     */
     @GetMapping
     public List<Station> getAllStations() {
         return stationService.getAllStations();

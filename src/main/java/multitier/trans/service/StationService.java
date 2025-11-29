@@ -1,5 +1,6 @@
 package multitier.trans.service;
 
+import multitier.trans.dto.CreateStationRequest;
 import multitier.trans.model.Station;
 import java.util.List;
 
@@ -11,10 +12,10 @@ public interface StationService {
 
     /**
      * Business logic for creating a new station.
-     * @param station The station object to be saved.
+     * @param request The DTO containing station creation data.
      * @return The saved Station entity (with its new ID).
      */
-    Station createStation(Station station);
+    Station createStation(CreateStationRequest request);
 
     /**
      * Fetches all stations.

@@ -5,6 +5,7 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import multitier.trans.model.enums.PassengerCategory;
+import multitier.trans.model.enums.ReservationStatus;
 import multitier.trans.model.enums.VehicleClass;
 
 /**
@@ -31,8 +32,10 @@ public class Reservation {
     @Min(value = 1, message = "Must book at least 1 seat")
     private int seatCount;
 
-    @NotBlank(message = "Reservation status cannot be blank")
-    private String status; // e.g., "CONFIRMED", "CANCELLED", "PENDING"
+    @NotNull(message = "Reservation status cannot be null")
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false)
+    private ReservationStatus status;
 
     @Embedded
     private TripTimeDetails tripDetails;
@@ -119,11 +122,11 @@ public class Reservation {
         this.seatCount = seatCount;
     }
 
-    public String getStatus() {
+    public ReservationStatus getStatus() {
         return status;
     }
 
-    public void setStatus(String status) {
+    public void setStatus(ReservationStatus status) {
         this.status = status;
     }
 }
