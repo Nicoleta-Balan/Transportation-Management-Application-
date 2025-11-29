@@ -2,12 +2,14 @@ package multitier.trans.controllers;
 
 import jakarta.validation.Valid;
 import multitier.trans.dto.CreateReservationRequest;
+import multitier.trans.dto.ReservationResponse;
 import multitier.trans.model.Reservation;
 import multitier.trans.service.ReservationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
 
 import java.util.List;
 
@@ -39,13 +41,13 @@ public class ReservationController {
 
 
     @GetMapping
-    public List<Reservation> getAllReservations() {
+    public List<ReservationResponse> getAllReservations() {
         return reservationService.getAllReservations();
     }
 
 
     @GetMapping("/{id}")
-    public ResponseEntity<Reservation> getReservationById(@PathVariable Long id) {
+    public ResponseEntity<ReservationResponse> getReservationById(@PathVariable Long id) {
         return reservationService.getReservationById(id)
                 .map(ResponseEntity::ok) // 200 OK if found
                 .orElse(ResponseEntity.notFound().build()); // 404 Not Found if not

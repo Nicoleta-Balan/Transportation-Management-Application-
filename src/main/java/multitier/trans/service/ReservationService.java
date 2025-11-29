@@ -1,12 +1,12 @@
 package multitier.trans.service;
 
 import multitier.trans.dto.CreateReservationRequest;
+import multitier.trans.dto.ReservationResponse;
 import multitier.trans.model.Reservation;
 
 import java.util.List;
 import java.util.Optional;
 
-/* Service Layer Interface ("The Menu") for Reservation business logic. */
 
 public interface ReservationService {
 
@@ -19,11 +19,11 @@ public interface ReservationService {
     Reservation cancelReservation(Long reservationId);
 
     /* Finds all reservations. */
-    List<Reservation> getAllReservations();
+    List<ReservationResponse> getAllReservations();
 
     /**
      * Finds a single reservation by its ID.
      */
 
-    Optional<Reservation> getReservationById(Long id);
+    Optional<ReservationResponse> getReservationById(Long id);
 }

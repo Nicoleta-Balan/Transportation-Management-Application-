@@ -13,8 +13,6 @@ import java.util.List;
 
 @Repository
 public interface ReservationRepository extends JpaRepository<Reservation, Long> {
-@Override
-        findAll();
 
     /**
      * Custom query: Finds all reservations for a specific route.
