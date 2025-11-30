@@ -41,18 +41,16 @@ public class ReservationControllerTest {
     @MockBean
     private ReservationService reservationService;
 
-    private Station testStationA;
-    private Station testStationB;
     private Route testRoute;
     private LocalDateTime testDeparture;
     private LocalDateTime testArrival;
 
     @BeforeEach
     void setUp() {
-        testStationA = new Station("Origin", "Desc A", StationStatus.ACTIVE);
+        Station testStationA = new Station("Origin", "Desc A", "address", 47.1788, 27.56716, StationStatus.ACTIVE);
         testStationA.setId(1L);
 
-        testStationB = new Station("Destination", "Desc B", StationStatus.ACTIVE);
+        Station testStationB = new Station("Destination", "Desc B", "address", 47.1788, 27.56716, StationStatus.ACTIVE);
         testStationB.setId(2L);
 
         testRoute = new Route(testStationA, testStationB, VehicleClass.STANDARD);

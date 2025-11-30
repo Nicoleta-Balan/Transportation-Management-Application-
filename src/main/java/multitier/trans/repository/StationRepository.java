@@ -13,4 +13,9 @@ public interface StationRepository extends JpaRepository<Station, Long> {
 
     //"SELECT * FROM stations WHERE name = @param"
     Station findByName(String name);
+
+    Station findByAddress(String address);
+
+    // Check for duplicates excluding current station
+    Station findByAddressAndIdNot(String address, Long id);
 }
