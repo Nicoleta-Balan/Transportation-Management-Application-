@@ -23,6 +23,7 @@ interface FormFieldRendererProps<T extends CreateStationRequest | UpdateStationR
 function typeSafeRegister<T extends CreateStationRequest | UpdateStationRequest>(
     register: UseFormRegister<T>,
     fieldKey: string,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     validation: RegisterOptions<any, any>
 ) {
     return register(fieldKey as Path<T>, validation as RegisterOptions<T, Path<T>>);

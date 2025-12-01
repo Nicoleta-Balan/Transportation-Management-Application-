@@ -199,10 +199,6 @@ function StationsPageContent({ stationsData }: { stationsData: ReturnType<typeof
     );
 }
 
-/**
- * Main stations page component
- * Provides edit form context and renders page content
- */
 export default function StationsPage() {
     const stationsData = useStations();
 

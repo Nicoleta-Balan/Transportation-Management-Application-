@@ -1,4 +1,4 @@
-import type { FieldError as ReactHookFormFieldError } from 'react-hook-form';
+import type { FieldError as ReactHookFormFieldError, UseFormRegisterReturn } from 'react-hook-form';
 import { FieldError } from './FieldError';
 import { FormLabel } from './FormLabel';
 
@@ -12,8 +12,9 @@ interface FormInputProps {
     readOnly?: boolean;
     helpText?: string;
     ariaDescribedBy?: string;
-    register?: ReturnType<any>; // react-hook-form register return
+    register?: UseFormRegisterReturn; // react-hook-form register return
     className?: string;
+    type?: string;
 }
 
 export function FormInput({
@@ -28,19 +29,20 @@ export function FormInput({
     ariaDescribedBy,
     register,
     className,
+    type = 'text',
 }: FormInputProps) {
     const inputProps = register
-        ? { ...register }
+        ? { ...register, type }
         : {
               value: value || '',
               readOnly,
+              type,
           };
 
     return (
         <div className="form-group">
             <FormLabel id={id} label={label} required={required} />
             <input
-                type="text"
                 id={id}
                 {...inputProps}
                 placeholder={placeholder}

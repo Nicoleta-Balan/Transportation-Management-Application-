@@ -28,18 +28,21 @@ interface InputFieldConfig extends BaseFieldConfig {
     readOnly?: boolean;
     value?: string;
     ariaDescribedBy?: string;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     validation: RegisterOptions<any, any>;
 }
 
 interface TextareaFieldConfig extends BaseFieldConfig {
     type: 'textarea';
     rows?: number;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     validation: RegisterOptions<any, any>;
 }
 
 interface SelectFieldConfig extends BaseFieldConfig {
     type: 'select';
     options: Array<{ value: string; label: string }>;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     validation: RegisterOptions<any, any>;
 }
 
@@ -51,6 +54,7 @@ interface ReadonlyFieldConfig extends BaseFieldConfig {
 interface HiddenFieldConfig {
     type: 'hidden';
     key: string;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     validation: RegisterOptions<any, any>;
 }
 

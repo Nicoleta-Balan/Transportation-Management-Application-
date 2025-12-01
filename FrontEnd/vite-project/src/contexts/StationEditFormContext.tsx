@@ -44,6 +44,7 @@ export function StationEditFormProvider({ children, loadStations }: StationEditF
     );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useStationEditFormContext(): StationEditFormContextValue {
     const context = useContext(StationEditFormContext);
     if (!context) {

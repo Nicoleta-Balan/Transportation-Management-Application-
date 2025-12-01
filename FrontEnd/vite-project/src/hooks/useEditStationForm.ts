@@ -78,7 +78,7 @@ export function useEditStationForm(
         });
         // Set initial location for edit form
         setEditSelectedLocation({ lat: station.latitude, lng: station.longitude });
-    }, [setEditValue]);
+    }, [setEditValue, setEditSelectedLocation]);
 
     const handleEditSubmit = useCallback(async (data: UpdateStationRequest) => {
         if (!editFormState.editingStation) return;

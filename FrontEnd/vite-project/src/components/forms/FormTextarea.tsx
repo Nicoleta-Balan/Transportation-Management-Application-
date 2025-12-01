@@ -1,4 +1,4 @@
-import type { FieldError as ReactHookFormFieldError } from 'react-hook-form';
+import type { FieldError as ReactHookFormFieldError, UseFormRegisterReturn } from 'react-hook-form';
 import { FieldError } from './FieldError';
 import { FormLabel } from './FormLabel';
 
@@ -9,7 +9,7 @@ interface FormTextareaProps {
     error?: ReactHookFormFieldError;
     placeholder?: string;
     rows?: number;
-    register?: ReturnType<any>; // react-hook-form register return
+    register?: UseFormRegisterReturn; // react-hook-form register return
 }
 
 export function FormTextarea({

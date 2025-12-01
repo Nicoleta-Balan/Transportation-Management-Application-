@@ -1,4 +1,4 @@
-import type { FieldError as ReactHookFormFieldError } from 'react-hook-form';
+import type { FieldError as ReactHookFormFieldError, UseFormRegisterReturn } from 'react-hook-form';
 import { FieldError } from './FieldError';
 import { FormLabel } from './FormLabel';
 
@@ -14,7 +14,7 @@ interface FormSelectProps {
     error?: ReactHookFormFieldError;
     options: SelectOption[];
     placeholder?: string;
-    register?: ReturnType<any>; // react-hook-form register return
+    register?: UseFormRegisterReturn; // react-hook-form register return
 }
 
 export function FormSelect({

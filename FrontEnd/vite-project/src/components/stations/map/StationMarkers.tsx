@@ -32,6 +32,16 @@ export function StationMarkers({
     createFormSelectedLocation, // For green marker (create form)
 }: StationMarkersProps) {
 
+    const handleMarkerDrag = useCallback(
+        async (e: L.DragEndEvent) => {
+            const marker = e.target;
+            const position = marker.getLatLng();
+            const address = await reverseGeocode(position.lat, position.lng);
+            onLocationSelect({ lat: position.lat, lng: position.lng, address });
+        },
+        [onLocationSelect]
+    );
+
     const createMarkerDragHandler = useCallback((
         handler: (location: { lat: number; lng: number; address: string }) => void
     ) => {
@@ -42,11 +52,6 @@ export function StationMarkers({
             handler({ lat: position.lat, lng: position.lng, address });
         };
     }, []);
-
-    const handleMarkerDrag = useCallback(
-        createMarkerDragHandler(onLocationSelect),
-        [createMarkerDragHandler, onLocationSelect]
-    );
 
     const handleGreenMarkerDrag = useCallback(
         (e: L.DragEndEvent) => {
