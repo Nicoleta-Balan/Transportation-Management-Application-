@@ -6,15 +6,15 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
 @Entity
-@Table(name = "reservations")
+@Table(name = "reservations") // table name in the DB, marked class as JPA entity
 public class Reservation {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.IDENTITY) // primary key
     private Long id;
 
     @NotNull(message = "Route cannot be null")
-    @ManyToOne
+    @ManyToOne // relation between reservations and routes - many to one (many reservations per route)
     @JoinColumn(name = "route_id", nullable = false)
     private Route route;
 
@@ -27,7 +27,7 @@ public class Reservation {
     @NotBlank(message = "Reservation status cannot be blank")
     private String status;
 
-    @Embedded
+    @Embedded // to avoid creating a separate table for this, will be added directly to the 'reservations' table
     private TripTimeDetails tripDetails;
 
     @NotNull(message = "Passenger category cannot be null")
@@ -42,8 +42,6 @@ public class Reservation {
 
     public Reservation() {
     }
-
-    // Getters and Setters
 
     public Long getId() {
         return id;
@@ -92,7 +90,6 @@ public class Reservation {
     public void setTripDetails(TripTimeDetails tripDetails) {
         this.tripDetails = tripDetails;
     }
-
     public PassengerCategory getPassengerCategory() {
         return passengerCategory;
     }
