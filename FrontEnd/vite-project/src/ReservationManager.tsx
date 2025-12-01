@@ -19,7 +19,7 @@ function ReservationManager() {
         arrivalTime: '2025-11-20T12:00:00',
     });
 
-    const API_URL = 'http://localhost:8085/api/reservations';
+    const API_URL = '/api/reservations'; // Use a relative path
 
     // useEffect runs after the component first appears on the screen.
     // We use it here to load the current reservations list from the server.
