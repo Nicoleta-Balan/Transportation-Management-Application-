@@ -26,7 +26,7 @@ import java.util.List;
 
 
 @RestController
-@RequestMapping("/api/stations")
+@RequestMapping("/api/stations-controller")
 @Tag(name = "StationsController", description = "API endpoints for managing stations")
 public class StationController {
 

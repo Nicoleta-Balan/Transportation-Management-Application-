@@ -53,7 +53,7 @@ public class StationControllerTest {
         invalidRequest.setStatus(StationStatus.ACTIVE);
 
         // 2. Act & 3. Assert
-        mockMvc.perform(post("/api/stations") // Send a POST request
+        mockMvc.perform(post("/api/stations-controller") // Send a POST request
                         .contentType(MediaType.APPLICATION_JSON) // as JSON
                         .content(objectMapper.writeValueAsString(invalidRequest))) // with the invalid data
                 .andExpect(status().isBadRequest()); // Assert that we get a 400 Bad Request
@@ -76,7 +76,7 @@ public class StationControllerTest {
         invalidRequest.setStatus(StationStatus.ACTIVE);
 
         // 2. Act & 3. Assert
-        mockMvc.perform(post("/api/stations")
+        mockMvc.perform(post("/api/stations-controller")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(invalidRequest)))
                 .andExpect(status().isBadRequest()); // Assert that we get a 400 Bad Request
@@ -103,7 +103,7 @@ public class StationControllerTest {
         when(stationService.createStation(any(CreateStationRequest.class))).thenReturn(savedStation);
 
         // 2. Act & 3. Assert
-        mockMvc.perform(post("/api/stations")
+        mockMvc.perform(post("/api/stations-controller")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(validRequest)))
                 .andExpect(status().isCreated()); // Assert that we get a 201 Created
@@ -125,7 +125,7 @@ public class StationControllerTest {
         when(stationService.updateStation(eq(1L), any(UpdateStationRequest.class)))
                 .thenReturn(updatedStation);
 
-        mockMvc.perform(put("/api/stations/1")
+        mockMvc.perform(put("/api/stations-controller/1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateRequest)))
                 .andExpect(status().isOk()); // 200 OK
@@ -144,7 +144,7 @@ public class StationControllerTest {
         when(stationService.updateStation(eq(999L), any(UpdateStationRequest.class)))
                 .thenThrow(new IllegalArgumentException("Station with id 999 not found"));
 
-        mockMvc.perform(put("/api/stations/999")
+        mockMvc.perform(put("/api/stations-controller/999")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateRequest)))
                 .andExpect(status().isBadRequest()); // 400 Bad Request
@@ -154,7 +154,7 @@ public class StationControllerTest {
     public void whenDeleteStation_withValidId_thenReturns204NoContent() throws Exception {
         doNothing().when(stationService).deleteStation(1L);
 
-        mockMvc.perform(delete("/api/stations/1"))
+        mockMvc.perform(delete("/api/stations-controller/1"))
                 .andExpect(status().isNoContent()); // 204 No Content
     }
 
@@ -163,7 +163,7 @@ public class StationControllerTest {
         doThrow(new IllegalArgumentException("Station with id 999 not found"))
                 .when(stationService).deleteStation(999L);
 
-        mockMvc.perform(delete("/api/stations/999"))
+        mockMvc.perform(delete("/api/stations-controller/999"))
                 .andExpect(status().isNotFound()); // 404 Not Found
     }
 }
