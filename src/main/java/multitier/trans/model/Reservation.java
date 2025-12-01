@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import multitier.trans.model.enums.PassengerCategory;
+import multitier.trans.model.enums.VehicleClass;
 
 @Entity
 @Table(name = "reservations") // table name in the DB, marked class as JPA entity
@@ -38,8 +40,30 @@ public class Reservation {
         return id;
     }
 
-    public void setId(Long id) {
-        this.id = id;
+    // ... other getters/setters ...
+    public TripTimeDetails getTripDetails() {
+        return tripDetails;
+    }
+
+    public void setTripDetails(TripTimeDetails tripDetails) {
+        this.tripDetails = tripDetails;
+    }
+
+    // --- GETTERS/SETTERS ---
+    public PassengerCategory getPassengerCategory() {
+        return passengerCategory;
+    }
+
+    public void setPassengerCategory(PassengerCategory passengerCategory) {
+        this.passengerCategory = passengerCategory;
+    }
+
+    public VehicleClass getVehicleClass() {
+        return vehicleClass;
+    }
+
+    public void setVehicleClass(VehicleClass vehicleClass) {
+        this.vehicleClass = vehicleClass;
     }
 
     public Route getRoute() {
@@ -48,6 +72,10 @@ public class Reservation {
 
     public void setRoute(Route route) {
         this.route = route;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
     }
 
     public String getPassengerName() {
@@ -72,13 +100,5 @@ public class Reservation {
 
     public void setStatus(String status) {
         this.status = status;
-    }
-
-    public TripTimeDetails getTripDetails() {
-        return tripDetails;
-    }
-
-    public void setTripDetails(TripTimeDetails tripDetails) {
-        this.tripDetails = tripDetails;
     }
 }

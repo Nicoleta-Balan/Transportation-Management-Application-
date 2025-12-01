@@ -6,6 +6,8 @@ import multitier.trans.model.Reservation;
 import multitier.trans.model.Route;
 import multitier.trans.model.Station;
 import multitier.trans.model.TripTimeDetails;
+import multitier.trans.model.enums.PassengerCategory;
+import multitier.trans.model.enums.VehicleClass;
 import multitier.trans.service.ReservationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -34,10 +36,9 @@ public class ReservationControllerTest {
     @Autowired
     private ObjectMapper objectMapper; // To convert Java objects to JSON strings
 
-    @MockBean // Creates a "fake" version of the service "brain"
+    @MockBean
     private ReservationService reservationService;
 
-    // Re-usable test objects
     private Station testStationA;
     private Station testStationB;
     private Route testRoute;
@@ -46,7 +47,6 @@ public class ReservationControllerTest {
 
     @BeforeEach
     void setUp() {
-        // This method runs before each @Test, setting up clean data
         testStationA = new Station("Origin", "Desc A", "Active");
         testStationA.setId(1L);
 
@@ -75,14 +75,19 @@ public class ReservationControllerTest {
         request.setDepartureTime(testDeparture);
         request.setArrivalTime(testArrival);
 
-        // This is the full Reservation object we expect the service to return
+        request.setPassengerCategory(PassengerCategory.ADULT);
+        request.setVehicleClass(VehicleClass.STANDARD);
+
+
         Reservation savedReservation = new Reservation();
-        savedReservation.setId(1L); // The DB assigns an ID
+        savedReservation.setId(1L);
         savedReservation.setRoute(testRoute);
         savedReservation.setPassengerName("Test Passenger");
         savedReservation.setSeatCount(2);
         savedReservation.setStatus("CONFIRMED");
         savedReservation.setTripDetails(new TripTimeDetails(testDeparture, testArrival));
+        savedReservation.setPassengerCategory(PassengerCategory.ADULT);
+        savedReservation.setVehicleClass(VehicleClass.STANDARD);
 
         // Tell the fake service: "WHEN you receive this request, THEN return this Reservation"
         when(reservationService.createReservation(any(CreateReservationRequest.class))).thenReturn(savedReservation);
@@ -109,6 +114,8 @@ public class ReservationControllerTest {
         cancelledReservation.setRoute(testRoute);
         cancelledReservation.setPassengerName("Test Passenger");
         cancelledReservation.setStatus("CANCELLED"); // The service changed the status
+        cancelledReservation.setPassengerCategory(PassengerCategory.ADULT);
+        cancelledReservation.setVehicleClass(VehicleClass.STANDARD);
 
         // tell the fake service: "WHEN you receive this request, THEN return this Reservation"
         when(reservationService.cancelReservation(1L)).thenReturn(cancelledReservation);
@@ -116,7 +123,7 @@ public class ReservationControllerTest {
         mockMvc.perform(put("/api/reservations/1/cancel")) // Fake a PUT request to the cancel URL
                 .andExpect(status().isOk()) // We expect a 200 OK status
                 .andExpect(jsonPath("$.id").value(1L))
-                .andExpect(jsonPath("$.status").value("CANCELLED")); // Check that the status is now CANCELLED
+                .andExpect(jsonPath("$.status").value("CANCELLED"));
     }
 
 
@@ -134,10 +141,12 @@ public class ReservationControllerTest {
         request.setSeatCount(2);
         request.setDepartureTime(testDeparture);
         request.setArrivalTime(testArrival);
+        request.setPassengerCategory(PassengerCategory.ADULT);
+        request.setVehicleClass(VehicleClass.STANDARD);
 
         mockMvc.perform(post("/api/reservations")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isBadRequest()); // We expect a 400 Bad Request
+                .andExpect(status().isBadRequest()); // Expecting 400 Bad Request
     }
 }

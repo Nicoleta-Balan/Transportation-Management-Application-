@@ -16,6 +16,7 @@ public interface ReservationService {
     /**
      * Business logic for cancelling a reservation
      */
+
     Reservation cancelReservation(Long reservationId);
 
     /* Finds all reservations. */

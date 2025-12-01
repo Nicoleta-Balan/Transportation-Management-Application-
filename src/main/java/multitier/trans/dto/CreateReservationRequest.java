@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
 public class CreateReservationRequest {
 
     @NotNull(message = "Route ID cannot be null")
-    private Long routeId; // The ID of the route to book
+    private Long routeId;
 
     @NotBlank(message = "Passenger name cannot be blank")
     private String passengerName;
@@ -69,4 +69,21 @@ public class CreateReservationRequest {
     public void setArrivalTime(LocalDateTime arrivalTime) {
         this.arrivalTime = arrivalTime;
     }
+
+    public PassengerCategory getPassengerCategory() {
+        return passengerCategory;
+    }
+
+    public void setPassengerCategory(PassengerCategory passengerCategory) {
+        this.passengerCategory = passengerCategory;
+    }
+
+    public VehicleClass getVehicleClass() {
+        return vehicleClass;
+    }
+
+    public void setVehicleClass(VehicleClass vehicleClass) {
+        this.vehicleClass = vehicleClass;
+    }
+    // --- END: Getters and Setters (FIX) ---
 }
