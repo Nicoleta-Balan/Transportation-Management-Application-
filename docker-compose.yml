@@ -10,7 +10,7 @@ services:
     environment:
       POSTGRES_DB: tms_db
       POSTGRES_USER: tms_user
-      POSTGRES_PASSWORD: gi
+      POSTGRES_PASSWORD: tms_password
     ports:
       - "5438:5432"
     volumes:
@@ -26,6 +26,7 @@ services:
   # 2. SPRING BOOT APPLICATION SERVICE (BACKEND API)
   # ----------------------------------------------------
   app:
+    image: tms_backend_image
     build: .
     container_name: tms_backend_app
     ports:

@@ -33,7 +33,7 @@ jobs:
         run: mvn -B clean package
 
       - name: Stop and Remove Existing Stack
-        run: docker compose down
+        run: docker compose down --timeout 1
 
       # Build Docker Images for ALL services and Deploy
       # This single command builds the 'app' (using the root Dockerfile)
