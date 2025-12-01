@@ -15,6 +15,11 @@ services:
       - "5438:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tms_user -d tms_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     restart: always
 
   # ----------------------------------------------------
@@ -23,11 +28,11 @@ services:
   app:
     build: .
     container_name: tms_backend_app
-    # Host port 8085 mapped to container port 8080
     ports:
-      - "8085:8080"
+      - "8085:8085"
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/tms_db
       SPRING_DATASOURCE_USERNAME: tms_user
@@ -43,11 +48,8 @@ services:
       context: ./FrontEnd/vite-project
       dockerfile: Dockerfile
     container_name: tms_frontend_app
-    # Map host port 3000 to the container's NGINX port 80
     ports:
-      - "3000:5173"
-    # The frontend is static, so it doesn't strictly depend on the backend to start,
-    # but it will likely fail to load data without it.
+      - "3000:80"
     depends_on:
       - app
     restart: always

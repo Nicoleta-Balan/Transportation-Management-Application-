@@ -14,7 +14,7 @@ public interface ReservationService {
     Reservation createReservation(CreateReservationRequest request);
 
     /**
-     * Business logic for cancelling a reservation (SCRUM-27).
+     * Business logic for cancelling a reservation
      */
     Reservation cancelReservation(Long reservationId);
 

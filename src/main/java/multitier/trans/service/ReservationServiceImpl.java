@@ -9,7 +9,7 @@ import multitier.trans.repository.ReservationRepository;
 import multitier.trans.repository.RouteRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional; // IMPORTANT
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -56,10 +56,8 @@ public class ReservationServiceImpl implements ReservationService {
         return reservationRepository.save(reservation);
     }
 
-    // --- AICI E SCHIMBAREA IMPORTANTA ---
-
     @Override
-    @Transactional(readOnly = true) // Tine conexiunea deschisa
+    @Transactional(readOnly = true)
     public List<ReservationResponse> getAllReservations() {
         List<Reservation> entities = reservationRepository.findAll();
         return entities.stream()
@@ -74,7 +72,6 @@ public class ReservationServiceImpl implements ReservationService {
                 .map(this::mapToResponse);
     }
 
-    // MAPPER-ul "SAFE" - Inlocuieste-l pe cel vechi cu acesta
     private ReservationResponse mapToResponse(Reservation reservation) {
         Long routeId = null;
         String origin = "N/A";
@@ -82,7 +79,6 @@ public class ReservationServiceImpl implements ReservationService {
         LocalDateTime departure = null;
         LocalDateTime arrival = null;
 
-        // Verificari de siguranta (sa nu fie null)
         if (reservation.getRoute() != null) {
             routeId = reservation.getRoute().getId();
             if (reservation.getRoute().getOriginStation() != null) {

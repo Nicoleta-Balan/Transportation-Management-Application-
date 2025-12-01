@@ -3,9 +3,9 @@ package multitier.trans.dto;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 
-/**
- * DTO (Data Transfer Object) for capturing the "create route" request from the frontend.
- */
+
+// DTO (Data Transfer Object) for capturing the "create route" request from the frontend.
+
 
 public class CreateRouteRequest {
 
@@ -18,7 +18,8 @@ public class CreateRouteRequest {
     @Min(value = 1, message = "Vehicle capacity must be at least 1")
     private int vehicleCapacity;
 
-    // --- Getters and Setters (Essential for JSON mapping) ---
+
+
 
     public Long getOriginStationId() {
         return originStationId;

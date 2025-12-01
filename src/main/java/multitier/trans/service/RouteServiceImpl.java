@@ -13,14 +13,13 @@ import java.util.Optional;
 
 /**
  * This is the "Implementation" of the RouteService.
- * It contains the actual business logic ("workflow")
  * It depends on the repositories to talk to the database.
  */
 
 @Service
-public class RouteServiceImpl implements RouteService { // Implementează interfața
+public class RouteServiceImpl implements RouteService { // Implements the RouteService interface
 
-    // Service-ul depinde de ambele repository-uri
+    // The service now depends on the repositories to talk to the database.
     private final RouteRepository routeRepository;
     private final StationRepository stationRepository;
 

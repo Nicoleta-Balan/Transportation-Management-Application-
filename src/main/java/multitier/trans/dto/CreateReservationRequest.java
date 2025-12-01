@@ -3,12 +3,13 @@ package multitier.trans.dto;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+
+import javax.xml.crypto.Data;
 import java.time.LocalDateTime;
 
-/**
- * DTO (Data Transfer Object) for handling a new reservation request.
- * This is the "form" the client (React) will fill out.
- */
+
+// DTO (Data Transfer Object) for handling a new reservation request. This is the "form" the client (React) will fill out.
+
 
 public class CreateReservationRequest {
 

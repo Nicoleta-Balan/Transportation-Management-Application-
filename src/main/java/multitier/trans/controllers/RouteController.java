@@ -8,26 +8,24 @@ import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid; // Import @Valid for validation
 import java.util.List;
 
-/**
- * REST Controller to handle HTTP requests for managing routes (the API endpoints).
- * This controller now depends on the 'RouteService' (the business logic layer)
- * instead of directly on the 'RouteRepository'.
- * The create endpoint now accepts a 'CreateRouteRequest' DTO.
- */
+
+/* REST Controller to handle HTTP requests for managing routes (the API endpoints).
+ This controller now depends on the 'RouteService' (the business logic layer)
+ instead of directly on the 'RouteRepository'.
+ The create endpoint now accepts a 'CreateRouteRequest' DTO.*/
 
 @RestController
 @RequestMapping("/api/routes")
 public class RouteController {
 
-    //The controller now depends on the Service layer, not the repository.
+    //The controller now depends on the Service layer and not the repository.\
 
     @Autowired
     private RouteService routeService;
 
-    /**
-     * GET endpoint (Read All): Fetches all routes.
-     * Now delegates the call to the service layer.
-     */
+/*GET endpoint (Read All): Fetches all routes.
+Now delegates the call to the service layer.*/
+
 
     @GetMapping
     public List<Route> getAllRoutes() {
@@ -59,8 +57,7 @@ public class RouteController {
     @PostMapping
     public ResponseEntity<Route> createRoute(@Valid @RequestBody CreateRouteRequest request) {
 
-        // The controller's only job is to pass the "form" (DTO)
-        // to the "brain" (Service).
+        // The controller's only job is to pass the "form" (DTO) to the Service
         Route createdRoute;
         createdRoute = routeService.createRoute(request);
 
