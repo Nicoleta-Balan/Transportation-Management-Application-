@@ -6,15 +6,15 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
 @Entity
-@Table(name = "reservations") // table name in the DB, marked class as JPA entity
+@Table(name = "reservations")
 public class Reservation {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY) // primary key
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @NotNull(message = "Route cannot be null")
-    @ManyToOne // relation between reservations and routes - many to one (many reservations per route)
+    @ManyToOne
     @JoinColumn(name = "route_id", nullable = false)
     private Route route;
 
@@ -27,12 +27,23 @@ public class Reservation {
     @NotBlank(message = "Reservation status cannot be blank")
     private String status;
 
-    @Embedded // to avoid creating a separate table for this, will be added directly to the 'reservations' table
+    @Embedded
     private TripTimeDetails tripDetails;
 
+    @NotNull(message = "Passenger category cannot be null")
+    @Enumerated(EnumType.STRING) // Tells JPA to store the enum as a String
+    @Column(name = "passenger_category")
+    private PassengerCategory passengerCategory;
+
+    @NotNull(message = "Vehicle class cannot be null")
+    @Enumerated(EnumType.STRING) // Tells JPA to store the enum as a String
+    @Column(name = "vehicle_class")
+    private VehicleClass vehicleClass;
 
     public Reservation() {
     }
+
+    // Getters and Setters
 
     public Long getId() {
         return id;
@@ -80,5 +91,21 @@ public class Reservation {
 
     public void setTripDetails(TripTimeDetails tripDetails) {
         this.tripDetails = tripDetails;
+    }
+
+    public PassengerCategory getPassengerCategory() {
+        return passengerCategory;
+    }
+
+    public void setPassengerCategory(PassengerCategory passengerCategory) {
+        this.passengerCategory = passengerCategory;
+    }
+
+    public VehicleClass getVehicleClass() {
+        return vehicleClass;
+    }
+
+    public void setVehicleClass(VehicleClass vehicleClass) {
+        this.vehicleClass = vehicleClass;
     }
 }

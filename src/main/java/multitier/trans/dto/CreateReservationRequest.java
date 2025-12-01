@@ -3,18 +3,16 @@ package multitier.trans.dto;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import multitier.trans.model.PassengerCategory; // Import statement
+import multitier.trans.model.VehicleClass;      // Import statement
 
-import javax.xml.crypto.Data;
 import java.time.LocalDateTime;
 
-
-// DTO (Data Transfer Object) for handling a new reservation request. This is the "form" the client (React) will fill out.
-
-
+// DTO (Data Transfer Object) for handling a new reservation request.
 public class CreateReservationRequest {
 
     @NotNull(message = "Route ID cannot be null")
-    private Long routeId; // The ID of the route to book
+    private Long routeId;
 
     @NotBlank(message = "Passenger name cannot be blank")
     private String passengerName;
@@ -28,7 +26,13 @@ public class CreateReservationRequest {
     @NotNull(message = "Arrival time cannot be null")
     private LocalDateTime arrivalTime;
 
+    @NotNull(message = "Passenger category cannot be null")
+    private PassengerCategory passengerCategory;
 
+    @NotNull(message = "Vehicle class cannot be null")
+    private VehicleClass vehicleClass;
+
+    // Getters and Setters
 
     public Long getRouteId() {
         return routeId;
@@ -68,5 +72,21 @@ public class CreateReservationRequest {
 
     public void setArrivalTime(LocalDateTime arrivalTime) {
         this.arrivalTime = arrivalTime;
+    }
+
+    public PassengerCategory getPassengerCategory() {
+        return passengerCategory;
+    }
+
+    public void setPassengerCategory(PassengerCategory passengerCategory) {
+        this.passengerCategory = passengerCategory;
+    }
+
+    public VehicleClass getVehicleClass() {
+        return vehicleClass;
+    }
+
+    public void setVehicleClass(VehicleClass vehicleClass) {
+        this.vehicleClass = vehicleClass;
     }
 }
