@@ -2,6 +2,8 @@ package multitier.trans.service;
 
 import multitier.trans.model.FarePolicy;
 import multitier.trans.model.Reservation;
+import multitier.trans.model.PassengerCategory; // Correct import
+import multitier.trans.model.VehicleClass;      // Correct import
 import multitier.trans.repository.FarePolicyRepository;
 import multitier.trans.repository.ReservationRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,14 +39,11 @@ public class FinancialServiceImpl implements FinancialService {
         double totalRevenue = 0.0;
 
         for (Reservation res : allReservations) {
-
-
             if ("CONFIRMED".equalsIgnoreCase(res.getStatus())) {
-
                 Optional<FarePolicy> policy = farePolicyRepository.findByRouteIdAndPassengerCategoryAndVehicleClass(
                         res.getRoute().getId(),
-                        res.getPassengerCategory(), // <-- FIXED
-                        res.getVehicleClass()     // <-- FIXED
+                        res.getPassengerCategory(),
+                        res.getVehicleClass()
                 );
 
                 if (policy.isPresent()) {

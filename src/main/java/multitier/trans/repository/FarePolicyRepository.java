@@ -1,8 +1,8 @@
 package multitier.trans.repository;
 
 import multitier.trans.model.FarePolicy;
-import multitier.trans.model.enums.PassengerCategory;
-import multitier.trans.model.enums.VehicleClass;
+import multitier.trans.model.PassengerCategory;
+import multitier.trans.model.VehicleClass;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

@@ -3,8 +3,6 @@ package multitier.trans.model;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
-import multitier.trans.model.enums.PassengerCategory;
-import multitier.trans.model.enums.VehicleClass;
 
 /**
  * Domain Model: Fare Policy & Cost.
