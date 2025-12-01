@@ -44,6 +44,10 @@ public class ReservationServiceImpl implements ReservationService {
         newReservation.setSeatCount(request.getSeatCount());
         newReservation.setTripDetails(tripDetails);
         newReservation.setStatus("CONFIRMED");
+        
+        // --- FIX: Transfer enum values from the request to the entity ---
+        newReservation.setPassengerCategory(request.getPassengerCategory());
+        newReservation.setVehicleClass(request.getVehicleClass());
 
         return reservationRepository.save(newReservation);
     }
