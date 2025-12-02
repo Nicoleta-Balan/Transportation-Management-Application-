@@ -21,11 +21,11 @@ async function fetchWithoutJson(url: string, options?: RequestInit): Promise<voi
 
 export const stationApi = {
     async getAllStations(): Promise<Station[]> {
-        return fetchWithErrorHandling<Station[]>(`${API_CONFIG.BASE_URL}/api/stations-controller`);
+        return fetchWithErrorHandling<Station[]>(`${API_CONFIG.BASE_URL}/api/stations`);
     },
 
     async createStation(request: CreateStationRequest): Promise<Station> {
-        return fetchWithErrorHandling<Station>(`${API_CONFIG.BASE_URL}/api/stations-controller`, {
+        return fetchWithErrorHandling<Station>(`${API_CONFIG.BASE_URL}/api/stations`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(request),
@@ -33,7 +33,7 @@ export const stationApi = {
     },
 
     async updateStation(id: number, request: UpdateStationRequest): Promise<Station> {
-        return fetchWithErrorHandling<Station>(`${API_CONFIG.BASE_URL}/api/stations-controller/${id}`, {
+        return fetchWithErrorHandling<Station>(`${API_CONFIG.BASE_URL}/api/stations/${id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(request),
@@ -41,7 +41,7 @@ export const stationApi = {
     },
 
     async deleteStation(id: number): Promise<void> {
-        return fetchWithoutJson(`${API_CONFIG.BASE_URL}/api/stations-controller/${id}`, {
+        return fetchWithoutJson(`${API_CONFIG.BASE_URL}/api/stations/${id}`, {
             method: 'DELETE',
         });
     }
