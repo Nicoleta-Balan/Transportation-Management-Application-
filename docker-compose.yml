@@ -10,7 +10,7 @@ services:
     environment:
       POSTGRES_DB: tms_db
       POSTGRES_USER: tms_user
-      POSTGRES_PASSWORD: gi
+      POSTGRES_PASSWORD: tms_password
     ports:
       - "5438:5432"
     volumes:
@@ -32,23 +32,21 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/tms_db
       SPRING_DATASOURCE_USERNAME: tms_user
       SPRING_DATASOURCE_PASSWORD: tms_password
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_JPA_SHOW_SQL: "false"
     restart: always
 
   # ----------------------------------------------------
   # 3. REACT FRONTEND SERVICE (VITE + NGINX)
   # ----------------------------------------------------
   frontend:
-    image: tms_frontend_image
     build:
-      # The build context is the directory containing the Dockerfile and the Frontend folder.
-      context: .
-      dockerfile: Dockerfile
+      context: ./FrontEnd
+      dockerfile: vite-project/Dockerfile
     container_name: tms_frontend_app
-    # Map host port 3000 to the container's NGINX port 80
+    # Map host port 3000 to the container's NGINX port 5173
     ports:
       - "3000:5173"
-    # The frontend is static, so it doesn't strictly depend on the backend to start,
-    # but it will likely fail to load data without it.
     depends_on:
       - app
     restart: always

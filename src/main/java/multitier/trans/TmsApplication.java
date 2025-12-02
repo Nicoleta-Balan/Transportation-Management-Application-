@@ -3,8 +3,9 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class TestDockerCIPipeline {
+public class TmsApplication {
     public static void main(String[] args) {
-        SpringApplication.run(TestDockerCIPipeline.class, args);
+        SpringApplication.run(TmsApplication.class, args);
     }
 }
+

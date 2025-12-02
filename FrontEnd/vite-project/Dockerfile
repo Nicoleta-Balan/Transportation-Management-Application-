@@ -20,8 +20,8 @@ RUN npm run build
 FROM nginx:alpine AS production
 
 # Copy the custom NGINX configuration
-# Assuming nginx.conf is next to the Dockerfile
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# nginx.conf is in the vite-project directory
+COPY vite-project/nginx.conf /etc/nginx/conf.d/default.conf
 
 # Copy the built application files from the 'build' stage
 # The build output is in /app/dist

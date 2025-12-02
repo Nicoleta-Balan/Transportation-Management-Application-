@@ -4,6 +4,7 @@ import multitier.trans.dto.CreateReservationRequest;
 import multitier.trans.model.Reservation;
 import multitier.trans.model.Route;
 import multitier.trans.model.TripTimeDetails;
+import multitier.trans.model.enums.ReservationStatus;
 import multitier.trans.repository.ReservationRepository;
 import multitier.trans.repository.RouteRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -49,7 +50,7 @@ public class ReservationServiceImpl implements ReservationService {
         newReservation.setPassengerName(request.getPassengerName());
         newReservation.setSeatCount(request.getSeatCount());
         newReservation.setTripDetails(tripDetails);
-        newReservation.setStatus("CONFIRMED");
+        newReservation.setStatus(ReservationStatus.CONFIRMED);
 
 
         // 4. Set the new fare details from the DTO
@@ -64,7 +65,7 @@ public class ReservationServiceImpl implements ReservationService {
     public Reservation cancelReservation(Long reservationId) {
         Reservation reservation = reservationRepository.findById(reservationId)
                 .orElseThrow(() -> new RuntimeException("Reservation not found with id: " + reservationId));
-        reservation.setStatus("CANCELLED");
+        reservation.setStatus(ReservationStatus.CANCELLED);
         return reservationRepository.save(reservation);
     }
 

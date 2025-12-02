@@ -1,11 +1,9 @@
 package multitier.trans.dto;
 
-import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
+import multitier.trans.model.enums.VehicleClass;
 
-/**
- * DTO (Data Transfer Object) for capturing the "create route" request from the frontend.
- */
+// Map "create route" request from the frontend to an object
 
 public class CreateRouteRequest {
 
@@ -15,8 +13,8 @@ public class CreateRouteRequest {
     @NotNull(message = "Destination station ID cannot be null")
     private Long destinationStationId;
 
-    @Min(value = 1, message = "Vehicle capacity must be at least 1")
-    private int vehicleCapacity;
+    @NotNull(message = "Vehicle class must be specified")
+    private VehicleClass vehicleClass;
 
     // --- Getters and Setters (Essential for JSON mapping) ---
 
@@ -36,11 +34,17 @@ public class CreateRouteRequest {
         this.destinationStationId = destinationStationId;
     }
 
-    public int getVehicleCapacity() {
-        return vehicleCapacity;
+    public VehicleClass getVehicleClass() {
+        return vehicleClass;
     }
 
-    public void setVehicleCapacity(int vehicleCapacity) {
-        this.vehicleCapacity = vehicleCapacity;
+    public void setVehicleClass(VehicleClass vehicleClass) {
+        this.vehicleClass = vehicleClass;
+    }
+
+    // Vehicle capacity is taken from the enum
+    public int getVehicleCapacity() {
+        return vehicleClass != null ? vehicleClass.getSeatCapacity() : 0;
+        // if vehicle class is not set defaults to 0 to avoid NullPointerException
     }
 }

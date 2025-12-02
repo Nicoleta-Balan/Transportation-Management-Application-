@@ -2,12 +2,18 @@ target/
 !.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
+*.log
 
 ### IntelliJ IDEA ###
+.idea/
+.idea/workspace.xml
 .idea/modules.xml
 .idea/jarRepositories.xml
 .idea/compiler.xml
 .idea/libraries/
+.idea/dataSources/
+.idea/dataSources.xml
+.idea/dataSources.local.xml
 *.iws
 *.iml
 *.ipr
@@ -30,6 +36,16 @@ target/
 build/
 !**/src/main/**/build/
 !**/src/test/**/build/
+
+
+# Docker & Database
+postgres-data/
+*.log
+
+# Environment
+.env
+.env.local
+.env.*.local
 
 ### VS Code ###
 .vscode/

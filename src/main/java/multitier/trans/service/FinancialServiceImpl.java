@@ -2,6 +2,7 @@ package multitier.trans.service;
 
 import multitier.trans.model.FarePolicy;
 import multitier.trans.model.Reservation;
+import multitier.trans.model.enums.ReservationStatus;
 import multitier.trans.repository.FarePolicyRepository;
 import multitier.trans.repository.ReservationRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,16 +40,20 @@ public class FinancialServiceImpl implements FinancialService {
         for (Reservation res : allReservations) {
 
 
-            if ("CONFIRMED".equalsIgnoreCase(res.getStatus())) {
+            if (res.getStatus() == ReservationStatus.CONFIRMED) {
 
                 Optional<FarePolicy> policy = farePolicyRepository.findByRouteIdAndPassengerCategoryAndVehicleClass(
                         res.getRoute().getId(),
-                        res.getPassengerCategory(), // <-- FIXED
-                        res.getVehicleClass()     // <-- FIXED
+                        res.getPassengerCategory(),
+                        res.getVehicleClass()
                 );
 
                 if (policy.isPresent()) {
-                    totalRevenue += (policy.get().getPrice() * res.getSeatCount());
+                    double basePrice = policy.get().getPrice();
+                    double discount = res.getPassengerCategory().getDiscountPercentage();
+                    double seatPrice = basePrice * (1 - discount / 100.0);
+                    // seat price takes into consideration the discount set in the enum for the passenger category
+                    totalRevenue += (seatPrice * res.getSeatCount());
                 } else {
                     System.err.println("No fare policy found for reservation ID: " + res.getId());
                 }
