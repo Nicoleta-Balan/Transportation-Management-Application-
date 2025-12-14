@@ -9,9 +9,12 @@ import multitier.trans.model.enums.StationStatus;
 import multitier.trans.service.StationService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.data.rest.webmvc.support.RepositoryEntityLinks;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -20,7 +23,9 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(multitier.trans.controllers.rest.StationRestController.class)
+@SpringBootTest
+@AutoConfigureMockMvc
+@ActiveProfiles("test")
 public class StationControllerTest {
 
     @Autowired
@@ -31,6 +36,9 @@ public class StationControllerTest {
 
     @MockBean
     private StationService stationService; // A "fake" version of the service
+
+    @MockBean
+    private RepositoryEntityLinks repositoryEntityLinks;
 
     @Test
     public void whenCreateStation_withInvalidName_thenReturns400BadRequest() throws Exception {
