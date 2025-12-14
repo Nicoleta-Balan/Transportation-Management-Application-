@@ -1,8 +1,8 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 
 import { useStations } from '../../hooks/useStations';
 import { useCreateStationForm } from '../../hooks/useCreateStationForm';
-import { useStationFilters } from '../../hooks/useStationFilters';
+import { useStationFilters, type StationSortColumn } from '../../hooks/useStationFilters';
 
 import { StationEditFormProvider, useStationEditFormContext } from '../../contexts/StationEditFormContext';
 
@@ -11,8 +11,8 @@ import { MAP_CONFIG } from '../../constants/stationConstants';
 import StationMap from './map/StationMap';
 import StationForm from './form/StationForm';
 import StationsTable from './list/StationsTable';
-import { ErrorAlert } from '../ErrorAlert';
-import { ErrorBoundary } from '../ErrorBoundary';
+import { DataListContent } from '../common/DataListContent';
+import { ResourcePage } from '../common/ResourcePage';
 
 import type { Station } from '../../types/Station';
 
@@ -23,13 +23,13 @@ interface StationsListContentProps {
     error: string | null;
     stations: Station[];
     sortedAndFilteredStations: Station[];
-    sortColumn: keyof Station | null;
+    sortColumn: StationSortColumn | null;
     sortDirection: 'asc' | 'desc';
     deleting: number | null;
     deleteError: Record<number, string>;
     searchTerm: string;
     onSearchChange: (value: string) => void;
-    onSort: (column: keyof Station) => void;
+    onSort: (column: StationSortColumn) => void;
     onDeleteClick: (station: Station) => void;
 }
 
@@ -47,35 +47,45 @@ function StationsListContent({
     onSort,
     onDeleteClick,
 }: StationsListContentProps) {
-    if (loading && stations.length === 0) {
-        return <div className="loading">Loading stations...</div>;
-    }
-
-    if (error && stations.length === 0) {
-        return <ErrorAlert error={error} />;
-    }
-
-    if (stations.length === 0) {
-        return <div className="empty-state">No stations found. Create one above!</div>;
-    }
-
     return (
-        <StationsTable
-            sortedAndFilteredStations={sortedAndFilteredStations}
-            sortColumn={sortColumn}
-            sortDirection={sortDirection}
-            deleting={deleting}
-            deleteError={deleteError}
-            searchTerm={searchTerm}
-            onSearchChange={onSearchChange}
-            onSort={onSort}
-            onDeleteClick={onDeleteClick}
-        />
+        <DataListContent
+            loading={loading}
+            error={error}
+            data={stations}
+            emptyMessage="No stations found. Create one above!"
+        >
+            {() => (
+                <StationsTable
+                    sortedAndFilteredStations={sortedAndFilteredStations}
+                    sortColumn={sortColumn}
+                    sortDirection={sortDirection}
+                    deleting={deleting}
+                    deleteError={deleteError}
+                    searchTerm={searchTerm}
+                    onSearchChange={onSearchChange}
+                    onSort={onSort}
+                    onDeleteClick={onDeleteClick}
+                />
+            )}
+        </DataListContent>
     );
 }
 
 function StationsPageContent({ stationsData }: { stationsData: ReturnType<typeof useStations> }) {
     const [isCreateFormExpanded, setIsCreateFormExpanded] = useState(false);
+
+    // Handle station created callback
+    const handleStationCreated = useCallback((stationId: number) => {
+        // Collapse the create form
+        setIsCreateFormExpanded(false);
+        // Scroll to the station entry after a short delay to allow DOM update
+        setTimeout(() => {
+            const stationElement = document.getElementById(`station-row-${stationId}`);
+            if (stationElement) {
+                stationElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }, 100);
+    }, []);
 
     // Create form hook
     const {
@@ -90,7 +100,7 @@ function StationsPageContent({ stationsData }: { stationsData: ReturnType<typeof
         onSubmit,
         watchedAddress,
         shouldShowAddressError,
-    } = useCreateStationForm(stationsData.setStations, stationsData.stations);
+    } = useCreateStationForm(stationsData.setStations, stationsData.stations, handleStationCreated);
 
     // Edit form context (replaces useEditStationForm hook)
     const {
@@ -129,73 +139,53 @@ function StationsPageContent({ stationsData }: { stationsData: ReturnType<typeof
     }), [editingStation, handleEditMapLocationSelect, handleMapLocationSelect, editSelectedLocation, selectedLocation, isCreateFormExpanded]);
 
     return (
-        <div className="stations-page">
-            <h1>Station Management</h1>
-
-            {/* Map Section */}
-            <section className="stations-map-section">
-                <ErrorBoundary sectionName="Station Map">
-                    <div className="stations-map-container">
-                        <StationMap
-                            {...mapProps}
-                            existingStations={stationsData.stations}
-                            height={MAP_CONFIG.MAP_HEIGHT}
-                        />
-                    </div>
-                </ErrorBoundary>
-            </section>
-
-            {/* Create Station Form */}
-            <section className="station-form-section">
-                <div className="form-header-toggle" onClick={() => setIsCreateFormExpanded(!isCreateFormExpanded)}>
-                    <h2>Create New Station</h2>
-                    <button 
-                        type="button" 
-                        className="collapse-toggle"
-                        aria-label={isCreateFormExpanded ? 'Collapse form' : 'Expand form'}
-                        aria-expanded={isCreateFormExpanded}
-                    >
-                        {isCreateFormExpanded ? '−' : '+'}
-                    </button>
-                </div>
-                {isCreateFormExpanded && (
-                    <ErrorBoundary sectionName="Create Station Form">
-                        <StationForm
-                            mode="create"
-                            register={register}
-                            handleSubmit={handleSubmit}
-                            errors={errors}
-                            isValid={isValid}
-                            submitting={submitting}
-                            formError={formError}
-                            watchedAddress={watchedAddress}
-                            shouldShowAddressError={shouldShowAddressError}
-                            onSubmit={onSubmit}
-                        />
-                    </ErrorBoundary>
-                )}
-            </section>
-
-            {/* Stations List */}
-            <section className="stations-list-section">
-                <ErrorBoundary sectionName="Stations Table">
-                    <StationsListContent
-                        loading={stationsData.loading}
-                        error={stationsData.error}
-                        stations={stationsData.stations}
-                        sortedAndFilteredStations={sortedAndFilteredStations}
-                        sortColumn={sortColumn}
-                        sortDirection={sortDirection}
-                        deleting={stationsData.deleting}
-                        deleteError={stationsData.deleteError}
-                        searchTerm={searchTerm}
-                        onSearchChange={setSearchTerm}
-                        onSort={handleSort}
-                        onDeleteClick={stationsData.handleDeleteClick}
+        <ResourcePage
+            title="Station Management"
+            pageClassName="stations-page"
+            mapSection={
+                <StationMap
+                    {...mapProps}
+                    existingStations={stationsData.stations}
+                    height={MAP_CONFIG.MAP_HEIGHT}
+                />
+            }
+            createFormSection={{
+                title: "Create New Station",
+                className: "station-form-section",
+                isExpanded: isCreateFormExpanded,
+                onToggle: () => setIsCreateFormExpanded(!isCreateFormExpanded),
+                content: (
+                    <StationForm
+                        mode="create"
+                        register={register}
+                        handleSubmit={handleSubmit}
+                        errors={errors}
+                        isValid={isValid}
+                        submitting={submitting}
+                        formError={formError}
+                        watchedAddress={watchedAddress}
+                        shouldShowAddressError={shouldShowAddressError}
+                        onSubmit={onSubmit}
                     />
-                </ErrorBoundary>
-            </section>
-        </div>
+                ),
+            }}
+            listSection={
+                <StationsListContent
+                    loading={stationsData.loading}
+                    error={stationsData.error}
+                    stations={stationsData.stations}
+                    sortedAndFilteredStations={sortedAndFilteredStations}
+                    sortColumn={sortColumn}
+                    sortDirection={sortDirection}
+                    deleting={stationsData.deleting}
+                    deleteError={stationsData.deleteError}
+                    searchTerm={searchTerm}
+                    onSearchChange={setSearchTerm}
+                    onSort={handleSort}
+                    onDeleteClick={stationsData.handleDeleteClick}
+                />
+            }
+        />
     );
 }
 

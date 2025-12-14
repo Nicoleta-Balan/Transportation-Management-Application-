@@ -23,12 +23,6 @@ export default function AdminLayout() {
                     >
                         Route Management
                     </Link>
-                    <Link
-                        to="/admin/book-tickets"
-                        className={`admin-nav-item ${isActive('/admin/book-tickets') ? 'active' : ''}`}
-                    >
-                        Book Tickets
-                    </Link>
                 </nav>
             </aside>
             <main className="admin-content">

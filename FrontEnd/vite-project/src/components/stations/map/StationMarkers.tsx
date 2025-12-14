@@ -1,16 +1,13 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 
 import { Marker, Popup } from 'react-leaflet';
 
 import type { Station } from '../../../types/Station';
 
-import { createDefaultMarkerIcon, createEditingMarkerIcon, createGreenMarkerIcon } from '../../../utils/mapMarkers';
+import { createEditingMarkerIcon, createGreenMarkerIcon, createStatusMarkerIcon } from '../../../utils/mapMarkers';
 import { reverseGeocode } from '../../../utils/geocoding';
 
 import { UI_CONSTANTS } from '../../../constants/stationConstants';
-
-// Default icon instance (icon is already set globally in main.tsx)
-const DefaultIcon = createDefaultMarkerIcon();
 
 interface StationMarkersProps {
     stations: Station[];
@@ -32,17 +29,8 @@ export function StationMarkers({
     createFormSelectedLocation, // For green marker (create form)
 }: StationMarkersProps) {
 
-    const handleMarkerDrag = useCallback(
-        async (e: L.DragEndEvent) => {
-            const marker = e.target;
-            const position = marker.getLatLng();
-            const address = await reverseGeocode(position.lat, position.lng);
-            onLocationSelect({ lat: position.lat, lng: position.lng, address });
-        },
-        [onLocationSelect]
-    );
-
-    const createMarkerDragHandler = useCallback((
+    // Unified drag handler that extracts position, reverse geocodes, and calls the handler
+    const createDragHandler = useCallback((
         handler: (location: { lat: number; lng: number; address: string }) => void
     ) => {
         return async (e: L.DragEndEvent) => {
@@ -53,12 +41,14 @@ export function StationMarkers({
         };
     }, []);
 
-    const handleGreenMarkerDrag = useCallback(
-        (e: L.DragEndEvent) => {
-            if (!onCreateFormLocationSelect) return;
-            createMarkerDragHandler(onCreateFormLocationSelect)(e);
-        },
-        [createMarkerDragHandler, onCreateFormLocationSelect]
+    const handleMarkerDrag = useCallback(
+        createDragHandler(onLocationSelect),
+        [createDragHandler, onLocationSelect]
+    );
+
+    const handleGreenMarkerDrag = useMemo(
+        () => onCreateFormLocationSelect ? createDragHandler(onCreateFormLocationSelect) : undefined,
+        [createDragHandler, onCreateFormLocationSelect]
     );
 
     return (
@@ -81,9 +71,11 @@ export function StationMarkers({
             {stations
                 .filter((station) => station.latitude && station.longitude)
                 .map((station) => {
-                    // Use red marker for editing station, default icon for others
+                    // Use red marker for editing station, status-based marker for others
                     const isEditing = editingStationId === station.id;
-                    const markerIcon = isEditing ? createEditingMarkerIcon() : DefaultIcon;
+                    const markerIcon = isEditing 
+                        ? createEditingMarkerIcon() 
+                        : createStatusMarkerIcon(station.status);
 
                     // Use selectedLocation if this is the editing station and a new location has been selected
                     const markerPosition = isEditing && selectedLocation

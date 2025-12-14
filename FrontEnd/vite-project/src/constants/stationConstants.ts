@@ -25,6 +25,10 @@ export const UI_CONSTANTS = {
     COLORS: {
         ERROR: '#dc3545',      // Red - errors, delete buttons, editing markers
         SUCCESS: '#28a745',    // Green - success states, create markers
+        // Status-based marker colors (matching status badge colors)
+        STATUS_ACTIVE: '#155724',        // Dark green - active stations
+        STATUS_INACTIVE: '#721c24',      // Dark red - inactive stations
+        STATUS_MAINTENANCE: '#856404',    // Dark yellow/brown - maintenance stations
     },
 } as const;
 

@@ -1,0 +1,39 @@
+.timetable-panel {
+    width: 100%;
+    padding: 0;
+    margin: 0;
+}
+
+.timetable-form-section {
+    /* Inherit sizing/padding from route-form-section; no overrides */
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.timetable-form-section .form-header-toggle {
+    padding: 0.75rem 0;
+}
+
+.timetable-form-section .form-header-toggle h2 {
+    font-size: 0.875rem !important;
+}
+
+
+.timetable-days-subrow td {
+    background: white;
+    border-top: none;
+    border-bottom: 1px solid #e0e0e0;
+    padding-top: 0.25rem;
+    padding-bottom: 0.5rem;
+}
+
+.timetable-edit-subrow {
+    margin-top: 2px;
+}
+
+.timetable-edit-subrow td {
+    background: #f9f9f9;
+    border-top: 1px solid #e0e0e0;
+    padding: 0;
+}
+

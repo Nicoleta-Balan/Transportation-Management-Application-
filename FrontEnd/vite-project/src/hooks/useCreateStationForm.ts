@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useCallback } from 'react';
 
 import { useForm, type RegisterOptions } from 'react-hook-form';
 
@@ -11,22 +11,15 @@ import { stationApi } from '../services/stationApi';
 
 import { useMapLocation } from './useMapLocation';
 import { useLocationState } from './useLocationState';
-
-import { getErrorMessage } from '../utils/errorUtils';
-
-interface CreateFormState {
-    submitting: boolean;
-    error: string | null;
-}
+import { useCreateFormState } from './useFormState';
+import { useFormSubmit } from './useFormSubmit';
 
 export function useCreateStationForm(
     setStations: React.Dispatch<React.SetStateAction<Station[]>>,
-    existingStations: Station[] = []
+    existingStations: Station[] = [],
+    onStationCreated?: (stationId: number) => void
 ) {
-    const [createFormState, setCreateFormState] = useState<CreateFormState>({
-        submitting: false,
-        error: null,
-    });
+    const { formState, setSubmitting, resetState, handleError } = useCreateFormState();
 
     // Use dedicated location state hook
     const { location: selectedLocation, setLocation: setSelectedLocation, resetLocation } = useLocationState();
@@ -72,23 +65,31 @@ export function useCreateStationForm(
         setSelectedLocation
     );
 
-    const onSubmit = useCallback(async (data: CreateStationRequest) => {
-        setCreateFormState(prev => ({ ...prev, submitting: true, error: null }));
-
-        try {
-            const newStation = await stationApi.createStation(data);
-            setStations(prev => [...prev, newStation]);
-            reset();
-            resetLocation();
-            setCreateFormState({ submitting: false, error: null });
-        } catch (err) {
-            setCreateFormState(prev => ({
-                ...prev,
-                submitting: false,
-                error: getErrorMessage(err, 'Failed to create station'),
-            }));
+    // Use generic form submit hook
+    const { handleSubmit: handleFormSubmit } = useFormSubmit(
+        setSubmitting,
+        handleError,
+        {
+            submitFn: (data: CreateStationRequest) => stationApi.createStation(data),
+            errorMessage: 'Failed to create station',
+            onSuccess: (newStation) => {
+                setStations(prev => [...prev, newStation]);
+                // Call the callback with the new station ID
+                if (onStationCreated && newStation.id) {
+                    onStationCreated(newStation.id);
+                }
+            },
+            onReset: () => {
+                reset();
+                resetLocation();
+                resetState();
+            },
         }
-    }, [reset, setStations, resetLocation]);
+    );
+
+    const onSubmit = useCallback(async (data: CreateStationRequest) => {
+        await handleFormSubmit(data);
+    }, [handleFormSubmit]);
 
     // Create a custom register function that adds duplicate validation for name field
     // Uses RegisterOptions for better type safety, with type assertion for merged options
@@ -138,8 +139,8 @@ export function useCreateStationForm(
         handleSubmit,
         errors,
         isValid,
-        submitting: createFormState.submitting,
-        error: createFormState.error,
+        submitting: formState.submitting,
+        error: formState.error,
         selectedLocation,
         handleMapLocationSelect,
         onSubmit,

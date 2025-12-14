@@ -4,12 +4,16 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import multitier.trans.dto.CreateReservationRequest;
 import multitier.trans.model.Reservation;
 import multitier.trans.model.Route;
+import multitier.trans.model.RouteStop;
 import multitier.trans.model.Station;
 import multitier.trans.model.TripTimeDetails;
 import multitier.trans.model.enums.PassengerCategory;
 import multitier.trans.model.enums.ReservationStatus;
 import multitier.trans.model.enums.StationStatus;
 import multitier.trans.model.enums.VehicleClass;
+
+import java.util.ArrayList;
+import java.util.List;
 import multitier.trans.service.ReservationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -29,7 +33,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(ReservationController.class)
+@WebMvcTest(multitier.trans.controllers.rest.ReservationRestController.class)
 public class ReservationControllerTest {
 
     @Autowired
@@ -53,8 +57,40 @@ public class ReservationControllerTest {
         Station testStationB = new Station("Destination", "Desc B", "address", 47.1788, 27.56716, StationStatus.ACTIVE);
         testStationB.setId(2L);
 
-        testRoute = new Route(testStationA, testStationB, VehicleClass.STANDARD);
+        // Create route with routeStops
+        testRoute = new Route();
         testRoute.setId(1L);
+        testRoute.setVehicleClass(VehicleClass.STANDARD);
+        testRoute.setVehicleCapacity(VehicleClass.STANDARD.getSeatCapacity());
+        testRoute.setDistance(100.0);
+        testRoute.setDurationMinutes(90);
+        
+        // Create route stops
+        List<RouteStop> stops = new ArrayList<>();
+        
+        // First stop (origin)
+        RouteStop stop1 = new RouteStop();
+        stop1.setRoute(testRoute);
+        stop1.setStation(testStationA);
+        stop1.setSequenceOrder(0);
+        stop1.setDistanceFromPrevious(0.0);
+        stop1.setDurationMinutesFromPrevious(0);
+        stop1.setCumulativeDistance(0.0);
+        stop1.setCumulativeDurationMinutes(0);
+        stops.add(stop1);
+        
+        // Second stop (destination)
+        RouteStop stop2 = new RouteStop();
+        stop2.setRoute(testRoute);
+        stop2.setStation(testStationB);
+        stop2.setSequenceOrder(1);
+        stop2.setDistanceFromPrevious(100.0);
+        stop2.setDurationMinutesFromPrevious(90);
+        stop2.setCumulativeDistance(100.0);
+        stop2.setCumulativeDurationMinutes(90);
+        stops.add(stop2);
+        
+        testRoute.setRouteStops(stops);
 
         testDeparture = LocalDateTime.of(2025, 11, 20, 10, 0);
         testArrival = LocalDateTime.of(2025, 11, 20, 12, 0);

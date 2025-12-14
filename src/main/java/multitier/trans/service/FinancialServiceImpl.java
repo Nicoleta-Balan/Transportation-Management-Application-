@@ -5,32 +5,18 @@ import multitier.trans.model.Reservation;
 import multitier.trans.model.enums.ReservationStatus;
 import multitier.trans.repository.FarePolicyRepository;
 import multitier.trans.repository.ReservationRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import lombok.RequiredArgsConstructor;
 
 import java.util.List;
 import java.util.Optional;
 
-/**
- * Service Implementation ("The Brain") for financial logic.
- */
-
 @Service
+@RequiredArgsConstructor  // Lombok: Generates constructor for final fields
 public class FinancialServiceImpl implements FinancialService {
 
     private final ReservationRepository reservationRepository;
     private final FarePolicyRepository farePolicyRepository;
-
-    @Autowired
-    public FinancialServiceImpl(ReservationRepository reservationRepository, FarePolicyRepository farePolicyRepository) {
-        this.reservationRepository = reservationRepository;
-        this.farePolicyRepository = farePolicyRepository;
-    }
-
-    /**
-     * This is the "Computation Service" logic
-     * This version is fixed to use the correct getters from Reservation.
-     */
 
     @Override
     public double calculateTotalRevenue() {

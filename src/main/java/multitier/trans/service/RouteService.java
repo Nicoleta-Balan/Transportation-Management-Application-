@@ -1,26 +1,22 @@
 package multitier.trans.service;
 
 import multitier.trans.dto.CreateRouteRequest;
+import multitier.trans.dto.UpdateRouteRequest;
 import multitier.trans.model.Route;
 import java.util.List;
 import java.util.Optional;
 
-/**
- * Service Layer Interface for Route
- * Uses a DTO to create routes, aligning
- * .
- */
 public interface RouteService {
 
     List<Route> findAllRoutes();
 
     Optional<Route> findRouteById(Long id);
 
-    /**
-     * Creates a new Route based on the DTO request.
-     * This is the business logic (workflow) for creating a route.
-     * @param request The DTO containing the IDs and capacity.
-     * @return The newly created and saved Route entity.
-     */
+    Route getRouteById(Long id);
+
     Route createRoute(CreateRouteRequest request);
+
+    Route updateRoute(Long id, UpdateRouteRequest request);
+
+    void deleteRoute(Long id);
 }

@@ -32,7 +32,7 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/tms_db
       SPRING_DATASOURCE_USERNAME: tms_user
       SPRING_DATASOURCE_PASSWORD: tms_password
-      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_JPA_HIBERNATE_DDL_AUTO: create
       SPRING_JPA_SHOW_SQL: "false"
     restart: always
 

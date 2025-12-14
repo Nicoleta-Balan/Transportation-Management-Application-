@@ -1,0 +1,183 @@
+.timetable-form {
+    padding: 1rem 0;
+}
+
+.timetable-top {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.day-selector {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.day-label {
+    font-weight: 600;
+    color: #1a4d7a;
+    font-size: 0.85rem;
+}
+
+.day-options {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.day-option {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.9rem;
+}
+
+.timetable-top-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1rem;
+    align-items: start;
+}
+
+.description-inline textarea {
+    min-height: 60px;
+}
+
+.timetable-stations-list {
+    margin-bottom: 1.5rem;
+}
+
+.timetable-stations-list h4 {
+    margin: 0 0 1rem 0;
+    color: #1a4d7a;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.timetable-stations-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.timetable-stations-table thead {
+    background-color: #1a4d7a;
+    color: white;
+}
+
+.timetable-stations-table th {
+    padding: 0.75rem;
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.875rem;
+}
+
+.timetable-stations-table td {
+    padding: 0.75rem;
+    border-bottom: 1px solid #e0e0e0;
+    font-size: 0.875rem;
+}
+
+.timetable-stations-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.timetable-stations-table tbody tr:hover {
+    background-color: #f5f5f5;
+}
+
+.station-address {
+    font-size: 0.75rem;
+    color: #666;
+    margin-top: 0.25rem;
+}
+
+.time-input {
+    padding: 0.5rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 0.875rem;
+    width: 100%;
+    min-width: 180px;
+}
+
+.time-input:focus {
+    outline: none;
+    border-color: #4CAF50;
+}
+
+.auto-calculated-time {
+    font-size: 0.75rem;
+    color: #6c757d;
+    margin-top: 0.25rem;
+    font-style: italic;
+}
+
+.no-departure,
+.no-arrival,
+.no-stop {
+    color: #999;
+    font-style: italic;
+}
+
+.stop-input {
+    width: 100%;
+    max-width: 120px;
+    padding: 0.5rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 0.875rem;
+}
+
+/* Use form-actions from SharedPageStyles.css for consistent styling */
+
+.timetables-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 0;
+    overflow: hidden;
+    box-shadow: none;
+    margin-top: 2px;
+}
+
+.timetables-table thead {
+    background-color: #1a4d7a;
+    color: white;
+}
+
+.timetables-table th {
+    padding: 0.75rem;
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.875rem;
+}
+
+.timetables-table th:last-child {
+    text-align: center;
+}
+
+.timetables-table td {
+    padding: 0.75rem;
+    border-bottom: 1px solid #e0e0e0;
+    font-size: 0.875rem;
+}
+
+.timetables-table td:last-child {
+    text-align: center;
+}
+
+.timetables-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.timetables-table tbody tr:hover {
+    background-color: #f5f5f5;
+}
+

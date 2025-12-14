@@ -1,61 +1,55 @@
-import { useState, useMemo } from 'react';
-
 import type { Station } from '../types/Station';
+import { useTableFilters } from './useTableFilters';
+
+export type StationSortColumn = 'name' | 'description' | 'address' | 'status';
 
 export function useStationFilters(stations: Station[]) {
-    const [searchTerm, setSearchTerm] = useState('');
-    const [sortColumn, setSortColumn] = useState<keyof Station | null>(null);
-    const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
-
-    const handleSort = (column: keyof Station) => {
-        if (sortColumn === column) {
-            setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-        } else {
-            setSortColumn(column);
-            setSortDirection('asc');
-        }
-    };
-
-    const sortedAndFilteredStations = useMemo(() => {
-        return stations
-            .filter((station) => {
-                if (!searchTerm) return true;
-                const search = searchTerm.toLowerCase();
-                return (
-                    station.name.toLowerCase().includes(search) ||
-                    (station.description && station.description.toLowerCase().includes(search)) ||
-                    (station.address && station.address.toLowerCase().includes(search))
-                );
-            })
-            .sort((a, b) => {
-                if (!sortColumn) return 0;
-                
-                let aValue: string | number | undefined = a[sortColumn];
-                let bValue: string | number | undefined = b[sortColumn];
-                
-                // Handle undefined/null values
-                if (aValue === undefined || aValue === null) aValue = '';
-                if (bValue === undefined || bValue === null) bValue = '';
-                
-                // Convert to string for comparison
-                const aStr = String(aValue).toLowerCase();
-                const bStr = String(bValue).toLowerCase();
-                
-                if (sortDirection === 'asc') {
-                    return aStr.localeCompare(bStr);
-                } else {
-                    return bStr.localeCompare(aStr);
-                }
-            });
-    }, [stations, searchTerm, sortColumn, sortDirection]);
+    const filters = useTableFilters<Station, StationSortColumn>(stations, {
+        searchFields: [
+            { 
+                name: 'name', 
+                extract: (station) => station.name 
+            },
+            { 
+                name: 'description', 
+                extract: (station) => station.description 
+            },
+            { 
+                name: 'address', 
+                extract: (station) => station.address 
+            },
+        ],
+        sortColumns: [
+            { 
+                key: 'name', 
+                extract: (station) => station.name,
+                type: 'string'
+            },
+            { 
+                key: 'description', 
+                extract: (station) => station.description || '',
+                type: 'string'
+            },
+            { 
+                key: 'address', 
+                extract: (station) => station.address || '',
+                type: 'string'
+            },
+            { 
+                key: 'status', 
+                extract: (station) => station.status,
+                type: 'string'
+            },
+        ],
+    });
 
     return {
-        searchTerm,
-        setSearchTerm,
-        sortColumn,
-        sortDirection,
-        handleSort,
-        sortedAndFilteredStations,
+        searchTerm: filters.searchTerm,
+        setSearchTerm: filters.setSearchTerm,
+        sortColumn: filters.sortColumn,
+        sortDirection: filters.sortDirection,
+        handleSort: filters.handleSort,
+        sortedAndFilteredStations: filters.filteredData,
     };
 }
 

@@ -4,15 +4,13 @@ import multitier.trans.model.FarePolicy;
 import multitier.trans.model.enums.PassengerCategory;
 import multitier.trans.model.enums.VehicleClass;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.rest.core.annotation.RepositoryRestResource;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
 
-/**
- * Spring Data JPA Repository for the FarePolicy entity.
- * Provides CRUD methods automatically.
- */
 @Repository
+@RepositoryRestResource(exported = false)  // Disable automatic REST exposure
 public interface FarePolicyRepository extends JpaRepository<FarePolicy, Long> {
 
     /**
