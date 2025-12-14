@@ -21,7 +21,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.data.rest.webmvc.support.RepositoryEntityLinks;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
@@ -36,7 +35,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 public class ReservationControllerTest {
@@ -50,8 +49,8 @@ public class ReservationControllerTest {
     @MockBean
     private ReservationService reservationService;
 
-    @MockBean
-    private RepositoryEntityLinks repositoryEntityLinks;
+    // Note: ReservationRepository is NOT mocked - Spring Data REST needs real repositories
+    // to initialize its handler mapping for @RepositoryRestController
 
     private Route testRoute;
     private LocalDateTime testDeparture;

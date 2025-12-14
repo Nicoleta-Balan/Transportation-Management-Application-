@@ -100,7 +100,7 @@ public class RouteRestController {
         // The service method already reloads the route with stops eagerly loaded
         // and initializes the collection within its transaction
         // The collection should be initialized and ready for serialization
-        EntityModel<Route> resource = EntityModelUtils.createEntityModel(
+        EntityModel<Route> resource = EntityModelUtils.createEntityModelSafe(
             created, Route.class, entityLinks);
         
         return ResponseEntity
@@ -139,7 +139,7 @@ public class RouteRestController {
             @Valid @RequestBody UpdateRouteRequest request) {
         
         Route updated = routeService.updateRoute(id, request);
-        EntityModel<Route> resource = EntityModelUtils.createEntityModel(
+        EntityModel<Route> resource = EntityModelUtils.createEntityModelSafe(
             updated, Route.class, entityLinks);
         
         return ResponseEntity.ok(resource);

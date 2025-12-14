@@ -54,7 +54,7 @@ public class StationRestController {
             @Valid @RequestBody CreateStationRequest request) {
         
         Station created = stationService.createStation(request);
-        EntityModel<Station> resource = EntityModelUtils.createEntityModel(
+        EntityModel<Station> resource = EntityModelUtils.createEntityModelSafe(
             created, Station.class, entityLinks);
         
         return ResponseEntity
@@ -93,7 +93,7 @@ public class StationRestController {
             @Valid @RequestBody UpdateStationRequest request) {
         
         Station updated = stationService.updateStation(id, request);
-        EntityModel<Station> resource = EntityModelUtils.createEntityModel(
+        EntityModel<Station> resource = EntityModelUtils.createEntityModelSafe(
             updated, Station.class, entityLinks);
         
         return ResponseEntity.ok(resource);

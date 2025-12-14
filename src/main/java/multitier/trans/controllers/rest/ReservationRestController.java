@@ -57,7 +57,7 @@ public class ReservationRestController {
             @Valid @RequestBody CreateReservationRequest request) {
         
         Reservation created = reservationService.createReservation(request);
-        EntityModel<Reservation> resource = EntityModelUtils.createEntityModel(
+        EntityModel<Reservation> resource = EntityModelUtils.createEntityModelSafe(
             created, Reservation.class, entityLinks);
         
         return ResponseEntity
@@ -85,7 +85,7 @@ public class ReservationRestController {
             @Parameter(description = "Reservation ID", required = true, example = "1")
             @PathVariable Long id) {
         Reservation cancelled = reservationService.cancelReservation(id);
-        EntityModel<Reservation> resource = EntityModelUtils.createEntityModel(
+        EntityModel<Reservation> resource = EntityModelUtils.createEntityModelSafe(
             cancelled, Reservation.class, entityLinks);
         
         return ResponseEntity.ok(resource);
