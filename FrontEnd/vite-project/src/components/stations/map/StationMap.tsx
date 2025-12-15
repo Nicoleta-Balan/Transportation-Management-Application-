@@ -1,13 +1,10 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
-
-import { MapContainer, TileLayer } from 'react-leaflet';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
+import { useEffect, useState } from 'react';
 
 import type { Station } from '../../../types/Station';
 
-import { MAP_CONFIG, UI_CONSTANTS } from '../../../constants/stationConstants';
+import { MAP_CONFIG } from '../../../constants/stationConstants';
 
+import { BaseMap } from '../../common/BaseMap';
 import { MapClickHandler } from './MapClickHandler';
 import { StationMarkers } from './StationMarkers';
 
@@ -35,98 +32,37 @@ export default function StationMap({
                                        isCreateFormExpanded = false,
                                        createFormSelectedLocation,
                                    }: StationMapProps) {
-    const [center, setCenter] = useState<[number, number]>(
-        initialLocation ? [initialLocation.lat, initialLocation.lng] : MAP_CONFIG.DEFAULT_CENTER
+    const [center, setCenter] = useState<[number, number] | undefined>(
+        initialLocation ? [initialLocation.lat, initialLocation.lng] : undefined
     );
-    const mapRef = useRef<L.Map | null>(null);
-
-    const invalidateMapSize = useCallback(() => {
-        setTimeout(() => {
-            mapRef.current?.invalidateSize();
-        }, UI_CONSTANTS.MAP_INVALIDATE_DELAY);
-    }, []);
-
-    const updateMapCenter = useCallback((location: { lat: number; lng: number }) => {
-        setCenter([location.lat, location.lng]);
-        mapRef.current?.setView([location.lat, location.lng], MAP_CONFIG.DEFAULT_ZOOM);
-        invalidateMapSize();
-    }, [invalidateMapSize]);
-
-    // Update center when initialLocation is provided (for edit mode)
-    useEffect(() => {
-        if (initialLocation) {
-            updateMapCenter(initialLocation);
-        }
-    }, [initialLocation, updateMapCenter]);
 
     // Update center when location is selected
     useEffect(() => {
         if (selectedLocation) {
-            updateMapCenter(selectedLocation);
+            setCenter([selectedLocation.lat, selectedLocation.lng]);
         }
-    }, [selectedLocation, updateMapCenter]);
-
-    // Try to get user's location on mount
-    useEffect(() => {
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    const { latitude, longitude } = position.coords;
-                    setCenter([latitude, longitude]);
-                },
-                () => {
-                    // If geolocation fails, use default location (already set in useState)
-                    // Silently fall back to default - no user action needed
-                }
-            );
-        }
-    }, []);
-
-    // Fix map size on mount and window resize
-    useEffect(() => {
-        // Invalidate size when component mounts
-        const timer = setTimeout(() => {
-            mapRef.current?.invalidateSize();
-        }, UI_CONSTANTS.MAP_INVALIDATE_DELAY);
-
-        // Also invalidate on window resize
-        const handleResize = () => {
-            mapRef.current?.invalidateSize();
-        };
-        window.addEventListener('resize', handleResize);
-
-        return () => {
-            clearTimeout(timer);
-            window.removeEventListener('resize', handleResize);
-        };
-    }, []);
+    }, [selectedLocation]);
 
     return (
-        <div style={{ height, width: '100%', borderRadius: '8px', overflow: 'hidden' }}>
-            <MapContainer
-                center={center}
-                zoom={MAP_CONFIG.DEFAULT_ZOOM}
-                style={{ height: '100%', width: '100%' }}
-                ref={mapRef}
-            >
-                <TileLayer
-                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                />
-                <MapClickHandler 
-                    onLocationSelect={editingStationId && onCreateFormLocationSelect ? onCreateFormLocationSelect : onLocationSelect} 
-                />
-                <StationMarkers
-                    stations={existingStations}
-                    editingStationId={editingStationId}
-                    selectedLocation={selectedLocation}
-                    onLocationSelect={onLocationSelect}
-                    isCreateFormExpanded={isCreateFormExpanded}
-                    onCreateFormLocationSelect={onCreateFormLocationSelect}
-                    createFormSelectedLocation={createFormSelectedLocation}
-                />
-            </MapContainer>
-        </div>
+        <BaseMap
+            height={height}
+            initialCenter={initialLocation ? [initialLocation.lat, initialLocation.lng] : undefined}
+            center={center}
+            useGeolocation={!initialLocation && !selectedLocation}
+        >
+            <MapClickHandler 
+                onLocationSelect={editingStationId && onCreateFormLocationSelect ? onCreateFormLocationSelect : onLocationSelect} 
+            />
+            <StationMarkers
+                stations={existingStations}
+                editingStationId={editingStationId}
+                selectedLocation={selectedLocation}
+                onLocationSelect={onLocationSelect}
+                isCreateFormExpanded={isCreateFormExpanded}
+                onCreateFormLocationSelect={onCreateFormLocationSelect}
+                createFormSelectedLocation={createFormSelectedLocation}
+            />
+        </BaseMap>
     );
 }
 

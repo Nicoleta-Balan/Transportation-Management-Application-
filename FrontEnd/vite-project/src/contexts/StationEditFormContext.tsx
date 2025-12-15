@@ -1,8 +1,7 @@
-import { createContext, useContext, type ReactNode } from 'react';
-
 import type { UseFormRegister, UseFormHandleSubmit, UseFormWatch, FieldErrors } from 'react-hook-form';
 
 import { useEditStationForm } from '../hooks/useEditStationForm';
+import { createEditFormContext } from '../utils/createEditFormContext';
 
 import type { Station, UpdateStationRequest } from '../types/Station';
 
@@ -27,10 +26,10 @@ interface StationEditFormContextValue {
     handleEditMapLocationSelect: (location: { lat: number; lng: number; address: string }) => void;
 }
 
-const StationEditFormContext = createContext<StationEditFormContextValue | null>(null);
+const { Provider: BaseProvider, useContextHook } = createEditFormContext<StationEditFormContextValue>('StationEditForm');
 
 interface StationEditFormProviderProps {
-    children: ReactNode;
+    children: React.ReactNode;
     loadStations: () => Promise<void>;
 }
 
@@ -38,18 +37,14 @@ export function StationEditFormProvider({ children, loadStations }: StationEditF
     const editForm = useEditStationForm(loadStations);
 
     return (
-        <StationEditFormContext.Provider value={editForm}>
+        <BaseProvider value={editForm}>
             {children}
-        </StationEditFormContext.Provider>
+        </BaseProvider>
     );
 }
 
 // eslint-disable-next-line react-refresh/only-export-components
 export function useStationEditFormContext(): StationEditFormContextValue {
-    const context = useContext(StationEditFormContext);
-    if (!context) {
-        throw new Error('useStationEditFormContext must be used within StationEditFormProvider');
-    }
-    return context;
+    return useContextHook();
 }
 

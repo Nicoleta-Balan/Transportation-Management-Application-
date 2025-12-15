@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
 
 import { useForm } from 'react-hook-form';
 
@@ -8,23 +8,13 @@ import { stationApi } from '../services/stationApi';
 
 import { useMapLocation } from './useMapLocation';
 import { useLocationState } from './useLocationState';
-
-import { getErrorMessage } from '../utils/errorUtils';
-
-interface EditFormState {
-    editingStation: Station | null;
-    error: string | null;
-    updating: boolean;
-}
+import { useEditFormState } from './useFormState';
+import { useFormSubmit } from './useFormSubmit';
 
 export function useEditStationForm(
     loadStations: () => Promise<void>
 ) {
-    const [editFormState, setEditFormState] = useState<EditFormState>({
-        editingStation: null,
-        error: null,
-        updating: false,
-    });
+    const { formState, setEditingResource, setUpdating, resetState, handleError } = useEditFormState<Station>();
 
     // Use dedicated location state hook
     const { location: editSelectedLocation, setLocation: setEditSelectedLocation, resetLocation } = useLocationState();
@@ -58,10 +48,10 @@ export function useEditStationForm(
     }, [resetEdit, resetLocation]);
 
     const handleEditMapLocationSelect = useCallback((location: { lat: number; lng: number; address: string }) => {
-        if (editFormState.editingStation) {
+        if (formState.editingResource) {
             baseHandleLocationSelect(location);
         }
-    }, [editFormState.editingStation, baseHandleLocationSelect]);
+    }, [formState.editingResource, baseHandleLocationSelect]);
 
     const handleEditClick = useCallback((station: Station) => {
         // Pre-populate the edit form with current station data
@@ -71,47 +61,60 @@ export function useEditStationForm(
         setEditValue('longitude', station.longitude);
         setEditValue('status', station.status);
         // Set initial state for edit form
-        setEditFormState({
-            editingStation: station,
-            error: null,
-            updating: false,
-        });
+        setEditingResource(station);
         // Set initial location for edit form
         setEditSelectedLocation({ lat: station.latitude, lng: station.longitude });
     }, [setEditValue, setEditSelectedLocation]);
 
-    const handleEditSubmit = useCallback(async (data: UpdateStationRequest) => {
-        if (!editFormState.editingStation) return;
-
-        setEditFormState(prev => ({ ...prev, updating: true, error: null }));
-
-        try {
-            await stationApi.updateStation(editFormState.editingStation.id, data);
-            // Success: close edit mode and refresh list
-            resetForm();
-            setEditFormState({ editingStation: null, error: null, updating: false });
-            await loadStations(); // Refresh the stations list
-        } catch (err) {
-            let errorMessage = getErrorMessage(err, 'Failed to update station');
-            // Check if it's a duplicate address error
-            if (err instanceof Error && err.message.includes('address') && err.message.includes('already exists')) {
-                errorMessage = 'This address is already used by another station. Please select a different location.';
-            }
-            setEditFormState(prev => ({ ...prev, updating: false, error: errorMessage }));
+    // Use generic form submit hook
+    const { handleSubmit: handleFormSubmit } = useFormSubmit(
+        setUpdating,
+        handleError,
+        {
+            submitFn: (data: UpdateStationRequest) => {
+                if (!formState.editingResource) {
+                    throw new Error('No station is being edited');
+                }
+                return stationApi.updateStation(formState.editingResource.id, data);
+            },
+            errorMessage: 'Failed to update station',
+            validate: () => {
+                if (!formState.editingResource) {
+                    return 'No station is being edited';
+                }
+                return null;
+            },
+            onReset: () => {
+                resetForm();
+                resetState();
+            },
+            onReload: loadStations,
+            onError: (err, defaultHandler) => {
+                // Check if it's a duplicate address error
+                if (err instanceof Error && err.message.includes('address') && err.message.includes('already exists')) {
+                    handleError(new Error('This address is already used by another station. Please select a different location.'), 'Validation failed');
+                } else {
+                    defaultHandler(err, 'Failed to update station');
+                }
+            },
         }
-    }, [editFormState.editingStation, resetForm, loadStations]);
+    );
+
+    const handleEditSubmit = useCallback(async (data: UpdateStationRequest) => {
+        await handleFormSubmit(data);
+    }, [handleFormSubmit]);
 
     const handleCancelEdit = useCallback(() => {
         resetForm();
-        setEditFormState({ editingStation: null, error: null, updating: false });
-    }, [resetForm]);
+        resetState();
+    }, [resetForm, resetState]);
 
     // Reset edit form when editingStation changes
     useEffect(() => {
-        if (!editFormState.editingStation) {
+        if (!formState.editingResource) {
             resetForm();
         }
-    }, [editFormState.editingStation, resetForm]);
+    }, [formState.editingResource, resetForm]);
 
     return {
         // Form methods
@@ -120,9 +123,9 @@ export function useEditStationForm(
         watchEdit,
         editErrors,
         isEditValid,
-        updating: editFormState.updating,
-        editError: editFormState.error,
-        editingStation: editFormState.editingStation,
+        updating: formState.updating,
+        editError: formState.error,
+        editingStation: formState.editingResource,
         editSelectedLocation,
         handleEditMapLocationSelect,
         handleEditClick,

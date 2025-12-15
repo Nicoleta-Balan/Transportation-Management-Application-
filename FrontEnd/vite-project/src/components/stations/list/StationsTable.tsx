@@ -1,21 +1,22 @@
 import type { Station } from '../../../types/Station';
+import type { StationSortColumn } from '../../../hooks/useStationFilters';
 
 import StationForm from '../form/StationForm';
 import ActionButtons from './ActionButtons';
-import StationSearchBar from './StationSearchBar';
-import { SortableTableHeader } from './SortableTableHeader';
+import { TableSearchBar } from '../../common/TableSearchBar';
+import { SortableTableHeader } from '../../common/SortableTableHeader';
 
 import { useStationEditFormContext } from '../../../contexts/StationEditFormContext';
 
 interface StationsTableProps {
     sortedAndFilteredStations: Station[];
-    sortColumn: keyof Station | null;
+    sortColumn: StationSortColumn | null;
     sortDirection: 'asc' | 'desc';
     deleting: number | null;
     deleteError: Record<number, string>;
     searchTerm: string;
     onSearchChange: (value: string) => void;
-    onSort: (column: keyof Station) => void;
+    onSort: (column: StationSortColumn) => void;
     onDeleteClick: (station: Station) => void;
 }
 
@@ -45,7 +46,11 @@ export default function StationsTable({
     } = useStationEditFormContext();
     return (
         <div className="stations-table-container">
-            <StationSearchBar searchTerm={searchTerm} onSearchChange={onSearchChange} />
+            <TableSearchBar
+                searchTerm={searchTerm}
+                onSearchChange={onSearchChange}
+                placeholder="Search by name, description, or address..."
+            />
             <table className="stations-table">
                 <thead>
                 <tr>
@@ -89,7 +94,7 @@ export default function StationsTable({
                     </tr>
                 ) : (
                     sortedAndFilteredStations.map((station) => (
-                    <tr key={station.id}>
+                    <tr key={station.id} id={`station-row-${station.id}`}>
                         {editingStation?.id === station.id ? (
                             // Edit mode - form spans all columns
                             <td colSpan={5}>

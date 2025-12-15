@@ -127,11 +127,11 @@ function EditForm({
                 {/* Submit and Cancel Buttons */}
                 <div className="form-actions">
                     <SubmitButton
-                        mode="update"
+                        mode="save"
                         isSubmitting={updating}
                         isValid={isValid}
-                        submittingLabel="Updating..."
-                        ariaLabel="Update station"
+                        submittingLabel="Saving..."
+                        ariaLabel="Save station"
                     />
                     <CancelButton
                         onClick={onCancel}

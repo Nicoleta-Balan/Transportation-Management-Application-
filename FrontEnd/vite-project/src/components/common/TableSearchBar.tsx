@@ -1,14 +1,15 @@
-interface StationSearchBarProps {
+interface TableSearchBarProps {
     searchTerm: string;
     onSearchChange: (value: string) => void;
+    placeholder: string;
 }
 
-export default function StationSearchBar({ searchTerm, onSearchChange }: StationSearchBarProps) {
+export function TableSearchBar({ searchTerm, onSearchChange, placeholder }: TableSearchBarProps) {
     return (
         <div className="search-container">
             <input
                 type="text"
-                placeholder="Search by name, description, or address..."
+                placeholder={placeholder}
                 value={searchTerm}
                 onChange={(e) => onSearchChange(e.target.value)}
                 className="search-input"

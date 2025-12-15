@@ -1,20 +1,18 @@
-import type { Station } from '../../../types/Station';
-
-interface SortableTableHeaderProps {
-    column: keyof Station;
+interface SortableTableHeaderProps<T extends string> {
+    column: T;
     label: string;
-    sortColumn: keyof Station | null;
+    sortColumn: T | null;
     sortDirection: 'asc' | 'desc';
-    onSort: (column: keyof Station) => void;
+    onSort: (column: T) => void;
 }
 
-export function SortableTableHeader({
+export function SortableTableHeader<T extends string>({
     column,
     label,
     sortColumn,
     sortDirection,
     onSort,
-}: SortableTableHeaderProps) {
+}: SortableTableHeaderProps<T>) {
     return (
         <th onClick={() => onSort(column)} className="sortable-header">
             {label}

@@ -5,12 +5,10 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import multitier.trans.model.enums.PassengerCategory;
 import multitier.trans.model.enums.VehicleClass;
+import lombok.Data;
 import java.time.LocalDateTime;
 
-/**
- * DTO for handling a new reservation request.
- */
-
+@Data  // Lombok: Generates getters, setters, toString, equals, hashCode
 public class CreateReservationRequest {
 
     @NotNull(message = "Route ID cannot be null")
@@ -33,64 +31,4 @@ public class CreateReservationRequest {
 
     @NotNull(message = "Vehicle class must be specified")
     private VehicleClass vehicleClass;
-
-    // --- START: Getters and Setters (FIX) ---
-    // These methods were missing, causing the build failure.
-
-    public Long getRouteId() {
-        return routeId;
-    }
-
-    public void setRouteId(Long routeId) {
-        this.routeId = routeId;
-    }
-
-    public String getPassengerName() {
-        return passengerName;
-    }
-
-    public void setPassengerName(String passengerName) {
-        this.passengerName = passengerName;
-    }
-
-    public int getSeatCount() {
-        return seatCount;
-    }
-
-    public void setSeatCount(int seatCount) {
-        this.seatCount = seatCount;
-    }
-
-    public LocalDateTime getDepartureTime() {
-        return departureTime;
-    }
-
-    public void setDepartureTime(LocalDateTime departureTime) {
-        this.departureTime = departureTime;
-    }
-
-    public LocalDateTime getArrivalTime() {
-        return arrivalTime;
-    }
-
-    public void setArrivalTime(LocalDateTime arrivalTime) {
-        this.arrivalTime = arrivalTime;
-    }
-
-    public PassengerCategory getPassengerCategory() {
-        return passengerCategory;
-    }
-
-    public void setPassengerCategory(PassengerCategory passengerCategory) {
-        this.passengerCategory = passengerCategory;
-    }
-
-    public VehicleClass getVehicleClass() {
-        return vehicleClass;
-    }
-
-    public void setVehicleClass(VehicleClass vehicleClass) {
-        this.vehicleClass = vehicleClass;
-    }
-    // --- END: Getters and Setters (FIX) ---
 }

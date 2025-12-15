@@ -1,8 +1,6 @@
 import type { Station } from '../../../types/Station';
-
 import { useStationEditFormContext } from '../../../contexts/StationEditFormContext';
-
-import { EditButton, DeleteButton } from '../../buttons';
+import { ResourceActionButtons } from '../../common/ResourceActionButtons';
 
 interface ActionButtonsProps {
     station: Station;
@@ -19,27 +17,18 @@ export default function ActionButtons({
 }: ActionButtonsProps) {
     // Get edit form state from context
     const { editingStation, handleEditClick } = useStationEditFormContext();
+    
     return (
-        <div className="action-buttons-container">
-            <div className="action-buttons">
-                <EditButton
-                    onClick={() => handleEditClick(station)}
-                    disabled={editingStation !== null && editingStation.id !== station.id || deleting === station.id}
-                    ariaLabel={`Edit station ${station.name}`}
-                />
-                <DeleteButton
-                    onClick={() => onDeleteClick(station)}
-                    disabled={editingStation !== null || deleting === station.id}
-                    isDeleting={deleting === station.id}
-                    ariaLabel={`Delete station ${station.name}`}
-                />
-            </div>
-            {deleteError[station.id] && (
-                <div className="delete-error-message" role="alert">
-                    {deleteError[station.id]}
-                </div>
-            )}
-        </div>
+        <ResourceActionButtons
+            resource={station}
+            editingId={editingStation?.id ?? null}
+            deleting={deleting}
+            deleteError={deleteError}
+            onEditClick={handleEditClick}
+            onDeleteClick={onDeleteClick}
+            getEditAriaLabel={(s) => `Edit station ${s.name}`}
+            getDeleteAriaLabel={(s) => `Delete station ${s.name}`}
+        />
     );
 }
 

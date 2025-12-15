@@ -3,14 +3,17 @@ package multitier.trans.controllers;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import multitier.trans.dto.CreateStationRequest;
 import multitier.trans.dto.UpdateStationRequest;
+import multitier.trans.exception.ResourceNotFoundException;
 import multitier.trans.model.Station;
 import multitier.trans.model.enums.StationStatus;
 import multitier.trans.service.StationService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -19,12 +22,9 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-/**
- * JUnit Test for Station Validation Service (implements SCRUM-19).
- * This test checks if the validation rules (@Size, @NotNull)
- * on the Station entity are working correctly.
- */
-@WebMvcTest(StationController.class) // We only want to test the Controller layer
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
+@AutoConfigureMockMvc
+@ActiveProfiles("test")
 public class StationControllerTest {
 
     @Autowired
@@ -36,10 +36,9 @@ public class StationControllerTest {
     @MockBean
     private StationService stationService; // A "fake" version of the service
 
-    /**
-     * Tests if the API correctly rejects a Station with an invalid name (too short).
-     * This proves our @Size(min=2) validation rule is working.
-     */
+    // Note: StationRepository is NOT mocked - Spring Data REST needs real repositories
+    // to initialize its handler mapping for @RepositoryRestController
+
 
     @Test
     public void whenCreateStation_withInvalidName_thenReturns400BadRequest() throws Exception {
@@ -59,11 +58,6 @@ public class StationControllerTest {
                 .andExpect(status().isBadRequest()); // Assert that we get a 400 Bad Request
     }
 
-    /**
-     * Test Case:
-     * Tests if the API correctly rejects a Station with a null name.
-     * This proves our @NotNull validation rule is working.
-     */
     @Test
     public void whenCreateStation_withNullName_thenReturns400BadRequest() throws Exception {
         // 1. Arrange: Create a station request with a null name
@@ -82,10 +76,6 @@ public class StationControllerTest {
                 .andExpect(status().isBadRequest()); // Assert that we get a 400 Bad Request
     }
 
-    /**
-     * "Happy Path" Test Case:
-     * Tests if the API accepts a station with valid data.
-     */
     @Test
     public void whenCreateStation_withValidData_thenReturns201Created() throws Exception {
         // 1. Arrange: Create a station request with valid data
@@ -132,7 +122,7 @@ public class StationControllerTest {
     }
 
     @Test
-    public void whenUpdateStation_withInvalidId_thenReturns400BadRequest() throws Exception {
+    public void whenUpdateStation_withInvalidId_thenReturns404NotFound() throws Exception {
         UpdateStationRequest updateRequest = new UpdateStationRequest();
         updateRequest.setDescription("Updated description");
         updateRequest.setAddress("456 Updated Street");
@@ -140,14 +130,14 @@ public class StationControllerTest {
         updateRequest.setLongitude(28.56716);
         updateRequest.setStatus(StationStatus.INACTIVE);
 
-        // Mock invalid ID
+        // Mock invalid ID - service now throws ResourceNotFoundException
         when(stationService.updateStation(eq(999L), any(UpdateStationRequest.class)))
-                .thenThrow(new IllegalArgumentException("Station with id 999 not found"));
+                .thenThrow(new ResourceNotFoundException("Station", 999L));
 
         mockMvc.perform(put("/api/stations/999")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateRequest)))
-                .andExpect(status().isBadRequest()); // 400 Bad Request
+                .andExpect(status().isNotFound()); // 404 Not Found
     }
 
     @Test
@@ -160,7 +150,7 @@ public class StationControllerTest {
 
     @Test
     public void whenDeleteStation_withInvalidId_thenReturns404NotFound() throws Exception {
-        doThrow(new IllegalArgumentException("Station with id 999 not found"))
+        doThrow(new ResourceNotFoundException("Station", 999L))
                 .when(stationService).deleteStation(999L);
 
         mockMvc.perform(delete("/api/stations/999"))

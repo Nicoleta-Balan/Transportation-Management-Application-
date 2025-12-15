@@ -4,17 +4,23 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import multitier.trans.model.enums.PassengerCategory;
 import multitier.trans.model.enums.ReservationStatus;
 import multitier.trans.model.enums.VehicleClass;
 
-/**
- * Implements Domain Model Implementation: Reservation & Booking
- * Includes fare details
- */
-
 @Entity
-@Table(name = "reservations")
+@Table(name = "reservations", indexes = {
+    @Index(name = "idx_reservation_route", columnList = "route_id"),
+    @Index(name = "idx_reservation_status", columnList = "status"),
+    @Index(name = "idx_reservation_passenger", columnList = "passengerName")
+})
+@Getter  // Lombok: Generates getters
+@Setter  // Lombok: Generates setters
+@NoArgsConstructor  // Required by JPA
+// Using @Getter/@Setter instead of @Data to avoid equals/hashCode issues with @ManyToOne and @Embedded relationships
 public class Reservation {
 
     @Id
@@ -40,93 +46,13 @@ public class Reservation {
     @Embedded
     private TripTimeDetails tripDetails;
 
-    /**
-     * Stores the passenger category for this specific reservation (e.g., ADULT).
-     * This is required to find the price that was paid.
-     */
-
     @NotNull(message = "Passenger category cannot be null")
     @Enumerated(EnumType.STRING)
     @Column(name = "passenger_category", nullable = false)
     private PassengerCategory passengerCategory;
 
-    /**
-     * Stores the vehicle class for this specific reservation (e.g., STANDARD).
-     * This is required to find the price that was paid.
-     */
-
     @NotNull(message = "Vehicle class cannot be null")
     @Enumerated(EnumType.STRING)
     @Column(name = "vehicle_class", nullable = false)
     private VehicleClass vehicleClass;
-
-
-    public Reservation() {
-    }
-
-    public Long getId() {
-        return id;
-    }
-
-    // ... other getters/setters ...
-    public TripTimeDetails getTripDetails() {
-        return tripDetails;
-    }
-
-    public void setTripDetails(TripTimeDetails tripDetails) {
-        this.tripDetails = tripDetails;
-    }
-
-    // --- GETTERS/SETTERS ---
-    public PassengerCategory getPassengerCategory() {
-        return passengerCategory;
-    }
-
-    public void setPassengerCategory(PassengerCategory passengerCategory) {
-        this.passengerCategory = passengerCategory;
-    }
-
-    public VehicleClass getVehicleClass() {
-        return vehicleClass;
-    }
-
-    public void setVehicleClass(VehicleClass vehicleClass) {
-        this.vehicleClass = vehicleClass;
-    }
-
-    public Route getRoute() {
-        return route;
-    }
-
-    public void setRoute(Route route) {
-        this.route = route;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public String getPassengerName() {
-        return passengerName;
-    }
-
-    public void setPassengerName(String passengerName) {
-        this.passengerName = passengerName;
-    }
-
-    public int getSeatCount() {
-        return seatCount;
-    }
-
-    public void setSeatCount(int seatCount) {
-        this.seatCount = seatCount;
-    }
-
-    public ReservationStatus getStatus() {
-        return status;
-    }
-
-    public void setStatus(ReservationStatus status) {
-        this.status = status;
-    }
 }

@@ -3,16 +3,15 @@ package multitier.trans.model;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import multitier.trans.model.enums.PassengerCategory;
 import multitier.trans.model.enums.VehicleClass;
 
-/**
- * Domain Model: Fare Policy & Cost.
- * This entity defines a specific pricing rule in the system.
- * It links a Route, a Passenger Category, and a Vehicle Class to a specific price.
- */
 @Entity
 @Table(name = "fare_policies")
+@Data  // Lombok: Generates getters, setters, toString, equals, hashCode
+@NoArgsConstructor  // Required by JPA
 public class FarePolicy {
 
     @Id
@@ -42,51 +41,4 @@ public class FarePolicy {
     @Min(value = 0, message = "Price cannot be negative")
     @Column(nullable = false)
     private Double price; //Intended as base price per trip
-
-    // --- Constructors ---
-
-    public FarePolicy() {
-    }
-
-    // --- Getters and Setters ---
-
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public Route getRoute() {
-        return route;
-    }
-
-    public void setRoute(Route route) {
-        this.route = route;
-    }
-
-    public PassengerCategory getPassengerCategory() {
-        return passengerCategory;
-    }
-
-    public void setPassengerCategory(PassengerCategory passengerCategory) {
-        this.passengerCategory = passengerCategory;
-    }
-
-    public VehicleClass getVehicleClass() {
-        return vehicleClass;
-    }
-
-    public void setVehicleClass(VehicleClass vehicleClass) {
-        this.vehicleClass = vehicleClass;
-    }
-
-    public Double getPrice() {
-        return price;
-    }
-
-    public void setPrice(Double price) {
-        this.price = price;
-    }
 }
