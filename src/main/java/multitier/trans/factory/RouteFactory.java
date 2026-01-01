@@ -61,6 +61,11 @@ public class RouteFactory {
                     stops.size(), route.getRouteStops().size()));
         }
 
+        // Set origin and destination stations from the stops
+        // The stops are ordered by sequenceOrder in the helper
+        route.setOriginStation(stops.get(0).getStation());
+        route.setDestinationStation(stops.get(stops.size() - 1).getStation());
+
         return route;
     }
 
@@ -71,4 +76,3 @@ public class RouteFactory {
         return description;
     }
 }
-

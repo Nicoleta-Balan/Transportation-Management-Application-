@@ -34,6 +34,19 @@ export const routeApi = {
             `${API_CONFIG.BASE_URL}/api/routes/search/findByIdWithStops?id=${id}`
         );
     },
+
+    // Search routes by origin and destination
+    async searchRoutesByStations(originId: number, destinationId: number): Promise<Route[]> {
+        const response = await fetchWithErrorHandling<{ _embedded?: { routes: Route[] } } | Route[]>(
+            `${API_CONFIG.BASE_URL}/api/routes/search/byStations?originId=${originId}&destinationId=${destinationId}`
+        );
+        
+        // Handle Spring Data REST response format (HAL) or direct array
+        if (Array.isArray(response)) {
+            return response;
+        }
+        return response._embedded?.routes || [];
+    },
     
     getRouteById: function(id: number) {
         return this.getById(id);
