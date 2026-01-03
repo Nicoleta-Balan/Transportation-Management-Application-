@@ -75,6 +75,12 @@ export default function SearchPage() {
         return `${hrs}h ${mins}m`;
     };
 
+    // Helper to get day name from date string
+    const getDayName = (dateStr: string) => {
+        const date = new Date(dateStr);
+        return date.toLocaleDateString('en-US', { weekday: 'long' });
+    };
+
     return (
         <div className="search-page">
             <header className="search-header">
@@ -157,7 +163,7 @@ export default function SearchPage() {
             {searched && (
                 <div className="results-section">
                     <div className="results-container">
-                        <h2>Available Routes</h2>
+                        <h2>Available Routes for {new Date(date).toLocaleDateString()} ({getDayName(date)})</h2>
                         {loading ? (
                             <div className="loading-message">Finding the best routes for you...</div>
                         ) : searchResults.length > 0 ? (
@@ -194,6 +200,11 @@ export default function SearchPage() {
                                                     <div className="duration-line">
                                                         <span className="duration">{formatDuration(timetable.route.durationMinutes)}</span>
                                                         <div className="line"></div>
+                                                        <span className="days-info">
+                                                            {timetable.daysOfWeek && timetable.daysOfWeek.length > 0 
+                                                                ? timetable.daysOfWeek.join(', ') 
+                                                                : 'Daily'}
+                                                        </span>
                                                     </div>
                                                     <div className="arrival">
                                                         <span className="time">{arrivalTime}</span>
