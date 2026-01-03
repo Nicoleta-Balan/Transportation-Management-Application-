@@ -1,8 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { loadStripe } from '@stripe/stripe-js';
+import type { Stripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import './BookingPage.css';
+
+const API_BASE_URL = 'http://localhost:8080/api';
 
 // --- Types ---
 interface LocationState {
@@ -13,7 +16,8 @@ interface LocationState {
         distance: number;
         durationMinutes: number;
         pricePerKm?: number;
-        vehicleCapacity?: number; // Added vehicle capacity
+        vehicleCapacity?: number;
+        vehicleClass?: 'STANDARD' | 'COACH' | 'MINI_BUS' | 'DOUBLE_DECKER';
     };
     timetable: {
         id: number;
@@ -41,9 +45,6 @@ interface Passenger {
 }
 
 // --- Constants ---
-const STRIPE_PUBLIC_KEY = "pk_test_placeholder"; // REPLACE WITH YOUR KEY
-const stripePromise = loadStripe(STRIPE_PUBLIC_KEY);
-
 const PRICE_PER_KM = 0.15;
 const LUGGAGE_PRICE = 5.00;
 const SEAT_RESERVATION_PRICE = 3.00;
@@ -56,15 +57,47 @@ const PASSENGER_MULTIPLIERS = {
 };
 
 // --- Payment Form Component ---
-const PaymentForm = ({ amount }: { amount: number }) => {
+const PaymentForm = ({
+    amount,
+    onSuccess,
+    onError
+}: {
+    amount: number;
+    onSuccess: () => void;
+    onError: (error: string) => void;
+}) => {
     const stripe = useStripe();
     const elements = useElements();
+    const [isProcessing, setIsProcessing] = useState(false);
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
     const handleSubmit = async (event: React.FormEvent) => {
         event.preventDefault();
-        if (!stripe || !elements) return;
-        console.log("Processing payment for:", amount);
-        alert("Payment integration would trigger here.");
+
+        if (!stripe || !elements) {
+            return;
+        }
+
+        setIsProcessing(true);
+        setErrorMessage(null);
+
+        const { error, paymentIntent } = await stripe.confirmPayment({
+            elements,
+            confirmParams: {
+                return_url: window.location.origin + '/booking/success',
+            },
+            redirect: 'if_required',
+        });
+
+        if (error) {
+            setErrorMessage(error.message || 'Payment failed');
+            onError(error.message || 'Payment failed');
+            setIsProcessing(false);
+        } else if (paymentIntent && paymentIntent.status === 'succeeded') {
+            onSuccess();
+        } else {
+            setIsProcessing(false);
+        }
     };
 
     return (
@@ -72,27 +105,208 @@ const PaymentForm = ({ amount }: { amount: number }) => {
             <div style={{ marginBottom: '1rem' }}>
                 <PaymentElement />
             </div>
-            <button className="pay-btn" disabled={!stripe}>
-                Pay ${amount.toFixed(2)}
+            {errorMessage && (
+                <div className="payment-error" style={{ color: 'red', marginBottom: '1rem', fontSize: '0.9rem' }}>
+                    {errorMessage}
+                </div>
+            )}
+            <button
+                className="pay-btn"
+                disabled={!stripe || isProcessing}
+                type="submit"
+            >
+                {isProcessing ? 'Processing...' : `Pay EUR ${amount.toFixed(2)}`}
             </button>
         </form>
     );
 };
 
-// --- Seat Map Component ---
-const SeatMap = ({ 
-    selectedSeats, 
-    onSeatSelect,
-    capacity
-}: { 
-    selectedSeats: string[], 
-    onSeatSelect: (seat: string) => void,
-    capacity: number
+// --- Payment Wrapper Component ---
+const PaymentSection = ({
+    amount,
+    description,
+    onSuccess,
+    onError
+}: {
+    amount: number;
+    description: string;
+    onSuccess: () => void;
+    onError: (error: string) => void;
 }) => {
-    // Calculate rows based on capacity (4 seats per row)
-    const totalRows = Math.ceil(capacity / 4);
-    const rows = Array.from({ length: totalRows }, (_, i) => i + 1);
-    
+    const [clientSecret, setClientSecret] = useState<string | null>(null);
+    const [stripePromise, setStripePromise] = useState<Promise<Stripe | null> | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        const initializePayment = async () => {
+            try {
+                // First, get the Stripe public key
+                const configResponse = await fetch(`${API_BASE_URL}/payments/config`);
+                if (!configResponse.ok) throw new Error('Failed to get Stripe config');
+                const config = await configResponse.json();
+
+                setStripePromise(loadStripe(config.publicKey));
+
+                // Then create the payment intent
+                const paymentResponse = await fetch(`${API_BASE_URL}/payments/create-payment-intent`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        amount: Math.round(amount * 100), // Convert to cents
+                        currency: 'eur',
+                        description: description
+                    })
+                });
+
+                if (!paymentResponse.ok) throw new Error('Failed to create payment intent');
+                const paymentData = await paymentResponse.json();
+
+                setClientSecret(paymentData.clientSecret);
+                setLoading(false);
+            } catch (err) {
+                console.error('Payment initialization error:', err);
+                setError('Failed to initialize payment. Please try again.');
+                setLoading(false);
+            }
+        };
+
+        if (amount > 0) {
+            initializePayment();
+        }
+    }, [amount, description]);
+
+    if (loading) {
+        return (
+            <div className="payment-loading" style={{ textAlign: 'center', padding: '2rem' }}>
+                <p>Initializing payment...</p>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="payment-error-container" style={{ textAlign: 'center', padding: '2rem' }}>
+                <p style={{ color: 'red' }}>{error}</p>
+                <button
+                    className="pay-btn"
+                    onClick={() => window.location.reload()}
+                    style={{ marginTop: '1rem' }}
+                >
+                    Retry
+                </button>
+            </div>
+        );
+    }
+
+    if (!clientSecret || !stripePromise) {
+        return (
+            <div className="payment-error-container" style={{ textAlign: 'center', padding: '2rem' }}>
+                <p>Unable to load payment form. Please refresh the page.</p>
+            </div>
+        );
+    }
+
+    const options = {
+        clientSecret,
+        appearance: {
+            theme: 'stripe' as const,
+            variables: {
+                colorPrimary: '#6A0DAD',
+            }
+        }
+    };
+
+    return (
+        <Elements stripe={stripePromise} options={options}>
+            <PaymentForm
+                amount={amount}
+                onSuccess={onSuccess}
+                onError={onError}
+            />
+        </Elements>
+    );
+};
+
+// --- Single Deck Component ---
+const SingleDeck = ({
+    selectedSeats,
+    onSeatSelect,
+    rows,
+    prefix = '',
+    deckLabel
+}: {
+    selectedSeats: string[],
+    onSeatSelect: (seat: string) => void,
+    rows: number[],
+    prefix?: string,
+    deckLabel?: string
+}) => {
+    return (
+        <div className="bus-layout">
+            {deckLabel && <div className="deck-label">{deckLabel}</div>}
+            <div className="driver-area">{prefix ? 'Stairs' : 'Driver'}</div>
+            {rows.map(row => (
+                <div key={row} className="seat-row">
+                    <div className="seat-pair left">
+                        {['A', 'B'].map(col => {
+                            const seatId = `${prefix}${row}${col}`;
+                            const isSelected = selectedSeats.includes(seatId);
+                            return (
+                                <button
+                                    key={seatId}
+                                    className={`seat ${isSelected ? 'selected' : 'available'}`}
+                                    onClick={() => onSeatSelect(seatId)}
+                                    title={`Seat ${seatId}`}
+                                >
+                                    {seatId}
+                                </button>
+                            );
+                        })}
+                    </div>
+                    <div className="aisle">{row}</div>
+                    <div className="seat-pair right">
+                        {['C', 'D'].map(col => {
+                            const seatId = `${prefix}${row}${col}`;
+                            const isSelected = selectedSeats.includes(seatId);
+                            return (
+                                <button
+                                    key={seatId}
+                                    className={`seat ${isSelected ? 'selected' : 'available'}`}
+                                    onClick={() => onSeatSelect(seatId)}
+                                    title={`Seat ${seatId}`}
+                                >
+                                    {seatId}
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+            ))}
+        </div>
+    );
+};
+
+// --- Seat Map Component ---
+const SeatMap = ({
+    selectedSeats,
+    onSeatSelect,
+    capacity,
+    vehicleClass
+}: {
+    selectedSeats: string[],
+    onSeatSelect: (seat: string) => void,
+    capacity: number,
+    vehicleClass?: string
+}) => {
+    const isDoubleDecker = vehicleClass === 'DOUBLE_DECKER';
+
+    // Double decker: 40 seats per floor (10 rows x 4 seats)
+    // Regular bus: calculate based on capacity
+    const seatsPerFloor = isDoubleDecker ? 40 : capacity;
+    const rowsPerFloor = Math.ceil(seatsPerFloor / 4);
+    const rows = Array.from({ length: rowsPerFloor }, (_, i) => i + 1);
+
     return (
         <div className="seat-map-container">
             <div className="seat-map-legend">
@@ -100,57 +314,34 @@ const SeatMap = ({
                 <div className="legend-item"><span className="seat selected"></span> Selected</div>
                 <div className="legend-item"><span className="seat occupied"></span> Occupied</div>
             </div>
-            
-            <div className="bus-layout">
-                <div className="driver-area">Driver</div>
-                {rows.map(row => (
-                    <div key={row} className="seat-row">
-                        <div className="seat-pair left">
-                            {['A', 'B'].map(col => {
-                                const seatId = `${row}${col}`;
-                                // Check if seat is within capacity (e.g. last row might not be full)
-                                const seatIndex = (row - 1) * 4 + (col === 'A' ? 0 : 1);
-                                if (seatIndex >= capacity) return <div key={seatId} className="seat-placeholder"></div>;
-                                
-                                const isSelected = selectedSeats.includes(seatId);
-                                return (
-                                    <button
-                                        key={seatId}
-                                        className={`seat ${isSelected ? 'selected' : 'available'}`}
-                                        onClick={() => onSeatSelect(seatId)}
-                                        title={`Seat ${seatId}`}
-                                    >
-                                        {seatId}
-                                    </button>
-                                );
-                            })}
-                        </div>
-                        <div className="aisle">{row}</div>
-                        <div className="seat-pair right">
-                            {['C', 'D'].map(col => {
-                                const seatId = `${row}${col}`;
-                                // Check if seat is within capacity
-                                const seatIndex = (row - 1) * 4 + (col === 'C' ? 2 : 3);
-                                if (seatIndex >= capacity) return <div key={seatId} className="seat-placeholder"></div>;
 
-                                const isSelected = selectedSeats.includes(seatId);
-                                return (
-                                    <button
-                                        key={seatId}
-                                        className={`seat ${isSelected ? 'selected' : 'available'}`}
-                                        onClick={() => onSeatSelect(seatId)}
-                                        title={`Seat ${seatId}`}
-                                    >
-                                        {seatId}
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    </div>
-                ))}
-            </div>
+            {isDoubleDecker ? (
+                <div className="double-decker-layout">
+                    <SingleDeck
+                        selectedSeats={selectedSeats}
+                        onSeatSelect={onSeatSelect}
+                        rows={rows}
+                        prefix="L"
+                        deckLabel="Lower Deck (40 seats)"
+                    />
+                    <SingleDeck
+                        selectedSeats={selectedSeats}
+                        onSeatSelect={onSeatSelect}
+                        rows={rows}
+                        prefix="U"
+                        deckLabel="Upper Deck (40 seats)"
+                    />
+                </div>
+            ) : (
+                <SingleDeck
+                    selectedSeats={selectedSeats}
+                    onSeatSelect={onSeatSelect}
+                    rows={rows}
+                />
+            )}
+
             <p className="seat-info-text">
-                Select a seat for €{SEAT_RESERVATION_PRICE.toFixed(2)} or skip to get a random seat assigned for free at check-in.
+                Select a seat for EUR {SEAT_RESERVATION_PRICE.toFixed(2)} or skip to get a random seat assigned for free at check-in.
             </p>
         </div>
     );
@@ -201,6 +392,8 @@ export default function BookingPage() {
     const [luggageCount, setLuggageCount] = useState(0);
     const [seatSelectionOpen, setSeatSelectionOpen] = useState(false);
     const [selectedSeats, setSelectedSeats] = useState<string[]>([]);
+    const [paymentSuccess, setPaymentSuccess] = useState(false);
+    const [paymentError, setPaymentError] = useState<string | null>(null);
 
     // Calculations
     const basePrice = (route.distance || 0) * (route.pricePerKm || PRICE_PER_KM);
@@ -247,12 +440,40 @@ export default function BookingPage() {
     const departureTime = originStop?.departureTime ? new Date(originStop.departureTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : "--:--";
     const arrivalTime = destStop?.arrivalTime ? new Date(destStop.arrivalTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : "--:--";
 
-
-    const options = {
-        mode: 'payment' as const,
-        amount: Math.round(total * 100),
-        currency: 'usd',
+    const handlePaymentSuccess = () => {
+        setPaymentSuccess(true);
+        // TODO: Create reservation in backend
     };
+
+    const handlePaymentError = (error: string) => {
+        setPaymentError(error);
+    };
+
+    // Show success screen after payment
+    if (paymentSuccess) {
+        return (
+            <div className="booking-page">
+                <div className="booking-container" style={{ justifyContent: 'center' }}>
+                    <div className="booking-card" style={{ textAlign: 'center', padding: '3rem' }}>
+                        <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>&#10003;</div>
+                        <h2 style={{ color: '#22c55e', marginBottom: '1rem' }}>Payment Successful!</h2>
+                        <p style={{ marginBottom: '2rem' }}>Your booking has been confirmed.</p>
+                        <p><strong>From:</strong> {route.originStation?.name}</p>
+                        <p><strong>To:</strong> {route.destinationStation?.name}</p>
+                        <p><strong>Date:</strong> {state.date}</p>
+                        <p><strong>Total Paid:</strong> EUR {total.toFixed(2)}</p>
+                        <button
+                            className="pay-btn"
+                            onClick={() => navigate('/')}
+                            style={{ marginTop: '2rem' }}
+                        >
+                            Back to Home
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="booking-page">
@@ -326,10 +547,11 @@ export default function BookingPage() {
                             <span className="chevron">{seatSelectionOpen ? '▲' : '▼'}</span>
                         </div>
                         {seatSelectionOpen && (
-                            <SeatMap 
-                                selectedSeats={selectedSeats} 
+                            <SeatMap
+                                selectedSeats={selectedSeats}
                                 onSeatSelect={handleSeatSelect}
-                                capacity={route.vehicleCapacity || 50} // Use route capacity or default to 50
+                                capacity={route.vehicleCapacity || 50}
+                                vehicleClass={route.vehicleClass}
                             />
                         )}
                     </div>
@@ -365,9 +587,17 @@ export default function BookingPage() {
                             <div className="step-badge">4</div>
                             <h2>Payment</h2>
                         </div>
-                        <Elements stripe={stripePromise} options={options}>
-                            <PaymentForm amount={total} />
-                        </Elements>
+                        <PaymentSection
+                            amount={total}
+                            description={`Booking: ${route.originStation?.name} to ${route.destinationStation?.name}`}
+                            onSuccess={handlePaymentSuccess}
+                            onError={handlePaymentError}
+                        />
+                        {paymentError && (
+                            <div className="payment-error-message" style={{ color: 'red', marginTop: '1rem', textAlign: 'center' }}>
+                                {paymentError}
+                            </div>
+                        )}
                     </div>
                 </div>
 
