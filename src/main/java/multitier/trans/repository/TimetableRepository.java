@@ -8,6 +8,7 @@ import org.springframework.data.rest.core.annotation.RepositoryRestResource;
 import org.springframework.data.rest.core.annotation.RestResource;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -62,5 +63,21 @@ public interface TimetableRepository extends JpaRepository<Timetable, Long> {
            "WHERE t.id = :id")
     @RestResource(exported = true, path = "findByIdWithStops", rel = "findByIdWithStops")
     Optional<Timetable> findByIdWithStops(@Param("id") Long id);
-}
 
+    // Native query to search timetables by stations and date
+    // Using native query to bypass potential JPQL mapping issues and ensure direct SQL execution
+    // against the known database schema.
+    @Query(value = "SELECT t.* FROM timetables t " +
+           "JOIN routes r ON t.route_id = r.id " +
+           "WHERE r.origin_station_id = :fromStationId " +
+           "AND r.destination_station_id = :toStationId " +
+           "AND (t.start_date IS NULL OR t.start_date <= :date) " +
+           "AND (t.end_date IS NULL OR t.end_date >= :date)", 
+           nativeQuery = true)
+    @RestResource(exported = false)
+    List<Timetable> findBySearch(
+        @Param("fromStationId") Long fromStationId,
+        @Param("toStationId") Long toStationId,
+        @Param("date") LocalDate date
+    );
+}

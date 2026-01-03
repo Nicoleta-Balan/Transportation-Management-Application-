@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import jakarta.persistence.EntityManager;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -146,6 +147,13 @@ public class TimetableServiceImpl implements TimetableService {
         RepositoryUtils.deleteByIdOrThrow(timetableRepository, "Timetable", id);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<Timetable> searchTimetables(Long fromStationId, Long toStationId, LocalDate date) {
+        // Use the repository method directly
+        return timetableRepository.findBySearch(fromStationId, toStationId, date);
+    }
+
     private Timetable reloadTimetableWithStops(Long timetableId) {
         return RepositoryUtils.reloadWithStops(
             timetableRepository::findByIdWithStops,
@@ -159,4 +167,3 @@ public class TimetableServiceImpl implements TimetableService {
     }
 
 }
-

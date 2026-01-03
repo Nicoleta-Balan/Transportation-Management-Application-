@@ -58,23 +58,13 @@ public class Route {
     @Column(name = "description")
     private String description;
 
-    // Helper methods to get origin and destination from routeStops
-    // These maintain backward compatibility with existing code
-    @JsonIgnore  // Ignore when Route is embedded in other entities to prevent lazy loading
-    public Station getOriginStation() {
-        if (routeStops == null || routeStops.isEmpty()) {
-            return null;
-        }
-        return routeStops.get(0).getStation();
-    }
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "origin_station_id")
+    private Station originStation;
 
-    @JsonIgnore  // Ignore when Route is embedded in other entities to prevent lazy loading
-    public Station getDestinationStation() {
-        if (routeStops == null || routeStops.isEmpty()) {
-            return null;
-        }
-        return routeStops.get(routeStops.size() - 1).getStation();
-    }
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "destination_station_id")
+    private Station destinationStation;
     
     // Get all intermediary stations (excluding first and last)
     @JsonIgnore  // Ignore when Route is embedded in other entities to prevent lazy loading
