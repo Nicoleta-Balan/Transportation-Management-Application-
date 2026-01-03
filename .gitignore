@@ -52,3 +52,9 @@ postgres-data/
 
 ### Mac OS ###
 .DS_Store
+
+# Node modules
+node_modules/
+FrontEnd/vite-project/node_modules/
+package-lock.json
+FrontEnd/vite-project/package-lock.json

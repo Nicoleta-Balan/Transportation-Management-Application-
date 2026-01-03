@@ -1,0 +1,493 @@
+/* src/components/booking/BookingPage.css */
+
+:root {
+    --primary-purple: #6A0DAD;
+    --primary-purple-hover: #580a91;
+    --bg-gray: #f4f4f4;
+    --text-dark: #333333;
+    --text-gray: #666666;
+    --border-color: #dddddd;
+    --white: #ffffff;
+}
+
+.booking-page {
+    background-color: var(--bg-gray);
+    min-height: 100vh;
+    padding-bottom: 4rem;
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+}
+
+/* Header / Nav */
+.booking-header {
+    background-color: var(--white);
+    height: 60px;
+    padding: 0 2rem;
+    display: flex;
+    align-items: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    margin-bottom: 2rem;
+}
+
+.back-btn {
+    background: none;
+    border: none;
+    color: var(--text-gray);
+    cursor: pointer;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+    transition: color 0.2s;
+}
+
+.back-btn:hover {
+    color: var(--primary-purple);
+}
+
+/* Main Layout */
+.booking-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 1rem;
+    display: grid;
+    grid-template-columns: 2fr 1fr; /* 2/3 Left, 1/3 Right */
+    gap: 2rem;
+    align-items: start;
+}
+
+/* Left Column - Cards */
+.booking-left-column {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.booking-card {
+    background-color: var(--white);
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    padding: 1.5rem;
+    border: 1px solid transparent;
+    transition: box-shadow 0.2s;
+}
+
+.booking-card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+/* Card Headers with Number Badges */
+.card-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.step-badge {
+    background-color: var(--primary-purple);
+    color: var(--white);
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.9rem;
+}
+
+.card-header h2 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-dark);
+    margin: 0;
+}
+
+/* Section 1: Passengers */
+.passenger-group {
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--bg-gray);
+}
+
+.passenger-group:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.passenger-type-label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-gray);
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+}
+
+.input-row {
+    display: flex;
+    gap: 1rem;
+}
+
+.input-wrapper {
+    flex: 1; /* 50% width each */
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.input-wrapper label {
+    font-size: 0.8rem;
+    color: var(--text-gray);
+}
+
+.booking-input {
+    padding: 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 1rem;
+    transition: all 0.2s;
+}
+
+.booking-input:focus {
+    outline: none;
+    border-color: var(--primary-purple);
+    box-shadow: 0 0 0 3px rgba(106, 13, 173, 0.1);
+}
+
+/* Section 2: Seat Reservation */
+.seat-selector-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.seat-selector-row:hover {
+    border-color: var(--primary-purple);
+    background-color: #fbf5ff;
+}
+
+.seat-content {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    font-weight: 500;
+    color: var(--text-dark);
+}
+
+.seat-icon {
+    font-size: 1.2rem;
+}
+
+/* Seat Map Styles */
+.seat-map-container {
+    padding: 1.5rem;
+    background-color: #f9f9f9;
+    border-radius: 0 0 4px 4px;
+    border: 1px solid var(--border-color);
+    border-top: none;
+}
+
+.seat-map-legend {
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+    font-size: 0.85rem;
+    color: var(--text-gray);
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.seat {
+    width: 32px;
+    height: 32px;
+    border-radius: 4px 4px 8px 8px;
+    border: 1px solid #ccc;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.seat.available {
+    background-color: var(--white);
+    color: var(--text-dark);
+}
+
+.seat.available:hover {
+    border-color: var(--primary-purple);
+    color: var(--primary-purple);
+}
+
+.seat.selected {
+    background-color: var(--primary-purple);
+    border-color: var(--primary-purple);
+    color: var(--white);
+}
+
+.seat.occupied {
+    background-color: #e0e0e0;
+    border-color: #ccc;
+    color: #999;
+    cursor: not-allowed;
+}
+
+.seat-placeholder {
+    width: 32px;
+    height: 32px;
+    /* Invisible placeholder to keep grid alignment */
+}
+
+.bus-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    max-width: 300px;
+    margin: 0 auto;
+    background-color: var(--white);
+    padding: 1rem;
+    border-radius: 8px;
+    border: 1px solid #eee;
+}
+
+.driver-area {
+    background-color: #eee;
+    padding: 0.5rem;
+    text-align: center;
+    border-radius: 4px;
+    margin-bottom: 1rem;
+    font-size: 0.8rem;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.seat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.seat-pair {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.aisle {
+    width: 20px;
+    text-align: center;
+    font-size: 0.7rem;
+    color: #ccc;
+}
+
+.seat-info-text {
+    text-align: center;
+    font-size: 0.85rem;
+    color: var(--text-gray);
+    margin-top: 1.5rem;
+    font-style: italic;
+}
+
+/* Section 3: Extras */
+.extra-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 0;
+    border-bottom: 1px solid var(--bg-gray);
+}
+
+.extra-info h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0 0 0.25rem 0;
+}
+
+.extra-info p {
+    font-size: 0.85rem;
+    color: var(--text-gray);
+    margin: 0;
+}
+
+.counter-control {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.counter-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 1px solid var(--border-color);
+    background: var(--white);
+    color: var(--primary-purple);
+    font-size: 1.2rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.counter-btn:hover {
+    border-color: var(--primary-purple);
+    background-color: var(--primary-purple);
+    color: var(--white);
+}
+
+/* Right Column - Summary Widget */
+.booking-right-column {
+    position: sticky;
+    top: 20px;
+}
+
+.summary-card {
+    background-color: var(--white);
+    border-radius: 4px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.12); /* Distinct shadow */
+    padding: 1.5rem;
+}
+
+.summary-header {
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+/* Trip Visual */
+.trip-visual {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin-bottom: 1.5rem;
+    position: relative;
+}
+
+.trip-point {
+    display: flex;
+    gap: 1rem;
+    position: relative;
+    padding-bottom: 1.5rem;
+}
+
+.trip-point:last-child {
+    padding-bottom: 0;
+}
+
+.time {
+    font-weight: 700;
+    min-width: 60px;
+}
+
+.station-name {
+    color: var(--text-gray);
+    font-size: 0.9rem;
+}
+
+/* The vertical line */
+.timeline-marker {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-right: 0.5rem;
+}
+
+.dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background-color: var(--white);
+    border: 2px solid var(--primary-purple);
+    z-index: 2;
+}
+
+.line {
+    width: 2px;
+    background-color: var(--border-color);
+    flex-grow: 1;
+    position: absolute;
+    top: 10px;
+    bottom: -10px;
+    left: 78px; /* Adjust based on time width + gap */
+    z-index: 1;
+}
+
+.trip-point:last-child .line {
+    display: none;
+}
+
+/* Price Breakdown */
+.price-breakdown {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.price-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.9rem;
+    color: var(--text-gray);
+}
+
+.price-row.total {
+    margin-top: 0.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: var(--text-dark);
+}
+
+.pay-btn {
+    width: 100%;
+    background-color: var(--primary-purple);
+    color: var(--white);
+    border: none;
+    padding: 1rem;
+    border-radius: 4px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 1.5rem;
+    transition: background-color 0.2s;
+}
+
+.pay-btn:hover {
+    background-color: var(--primary-purple-hover);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .booking-container {
+        grid-template-columns: 1fr;
+    }
+
+    .booking-right-column {
+        position: static;
+        order: -1; /* Show summary first on mobile? Or keep at bottom */
+    }
+
+    .input-row {
+        flex-direction: column;
+    }
+}

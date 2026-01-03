@@ -1,22 +1,27 @@
 /* SearchPage.css */
 
-/* Ensure the page container takes full viewport dimensions */
+:root {
+    --primary-purple: #6A0DAD;
+    --primary-purple-hover: #580a91;
+    --text-dark: #333;
+    --text-gray: #666;
+    --border-color: #ddd;
+    --bg-light: #f5f5f5;
+}
+
 .search-page {
     min-height: 100vh;
     width: 100vw;
     display: flex;
     flex-direction: column;
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-    overflow-x: hidden;
-    position: relative; /* Establish positioning context */
-    background-color: #f5f5f5;
+    background-color: var(--bg-light);
 }
 
-/* Header Styles - Fixed to top, full width */
+/* Header */
 .search-header {
     background-color: white;
     height: 60px;
-    width: 100%;
     padding: 0 2rem;
     display: flex;
     justify-content: space-between;
@@ -24,149 +29,264 @@
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     position: fixed;
     top: 0;
-    left: 0; /* Anchor to left edge */
-    right: 0; /* Anchor to right edge */
+    left: 0;
+    right: 0;
     z-index: 1000;
 }
 
 .logo {
     font-size: 1.5rem;
     font-weight: 800;
-    color: #73d700;
+    color: var(--primary-purple);
     text-transform: uppercase;
     letter-spacing: -0.5px;
 }
 
 .admin-btn {
     padding: 0.5rem 1rem;
-    background-color: transparent;
+    background: transparent;
     border: 1px solid #1a1a1a;
     border-radius: 4px;
     cursor: pointer;
     font-weight: 600;
     font-size: 0.9rem;
     transition: all 0.2s;
-    text-decoration: none;
-    color: #1a1a1a;
 }
 
 .admin-btn:hover {
-    background-color: #1a1a1a;
+    background: #1a1a1a;
     color: white;
 }
 
-/* Hero Section Styles - Full Screen Background initially */
+/* Hero Section */
 .hero-section {
     min-height: 100vh;
-    width: 100vw;
-    /* High-quality placeholder image */
-    background-image: linear-gradient(rgba(0,0,0,0.2), rgba(0,0,0,0.2)), url('https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?q=80&w=1920&auto=format&fit=crop');
+    width: 100%;
+    background-image: linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.3)), url('https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?q=80&w=1920&auto=format&fit=crop');
     background-size: cover;
     background-position: center;
-    background-repeat: no-repeat;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding-top: 60px; /* Offset for fixed header */
+    padding-top: 60px;
     transition: min-height 0.5s ease;
 }
 
-/* When searched, shrink hero section */
 .hero-section.searched {
     min-height: 40vh;
     align-items: flex-end;
     padding-bottom: 2rem;
 }
 
-/* Search Container Styles - Centered Box */
-.search-container {
+/* Search Widget Container */
+.search-widget-container {
     background-color: white;
-    padding: 2rem;
-    border-radius: 8px;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
-    width: 90%;
-    max-width: 1200px;
-    z-index: 10; /* Above hero image */
-    position: relative; /* Relative to flex container */
+    padding: 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+    width: 95%;
+    max-width: 1100px;
+    z-index: 10;
 }
 
-.search-container h1 {
-    margin-bottom: 1.5rem;
-    color: #1a1a1a;
-    font-size: 2rem;
-    font-weight: 700;
-}
-
-/* Search Form Styles - Horizontal Layout */
-.search-form {
+/* Trip Type Toggles */
+.trip-type-toggles {
     display: flex;
-    flex-direction: row;
-    gap: 10px;
-    align-items: flex-end;
-    width: 100%;
+    gap: 1.5rem;
+    margin-bottom: 1rem;
+    padding-left: 0.5rem;
 }
 
-.form-group {
-    flex: 1;
+.toggle-btn {
     display: flex;
-    flex-direction: column;
+    align-items: center;
     gap: 0.5rem;
-}
-
-.form-group label {
-    font-size: 0.75rem;
-    font-weight: 700;
-    color: #666;
-    text-transform: uppercase;
-}
-
-.form-group input, .form-group select {
-    padding: 0.75rem;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    font-size: 1rem;
-    width: 100%;
-    height: 48px;
-    transition: border-color 0.2s;
-    background-color: white;
-}
-
-.form-group input:focus, .form-group select:focus {
-    outline: none;
-    border-color: #73d700;
-    box-shadow: 0 0 0 2px rgba(115, 215, 0, 0.2);
-}
-
-.search-btn {
-    background-color: #73d700;
-    color: #1a1a1a;
-    border: none;
-    padding: 0 2.5rem;
-    font-size: 1.125rem;
-    font-weight: 700;
-    border-radius: 4px;
     cursor: pointer;
-    transition: background-color 0.2s;
-    height: 48px;
-    min-width: 150px;
-}
-
-.search-btn:hover {
-    background-color: #60b300;
-}
-
-.search-btn:disabled {
-    background-color: #ccc;
-    cursor: not-allowed;
-}
-
-.search-error {
-    color: #d32f2f;
-    margin-top: 1rem;
+    font-size: 0.95rem;
+    color: var(--text-gray);
     font-weight: 500;
 }
 
-/* Results Section */
+.toggle-btn.active {
+    color: var(--text-dark);
+    font-weight: 700;
+}
+
+.toggle-btn input {
+    accent-color: var(--primary-purple);
+    width: 18px;
+    height: 18px;
+}
+
+/* Main Search Row */
+.search-bar-row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: flex-end;
+}
+
+.search-field-group {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    position: relative; /* For popover positioning */
+}
+
+.search-field-group label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--text-gray);
+    text-transform: uppercase;
+    margin-left: 4px;
+}
+
+.search-field-group input,
+.search-field-group select,
+.passenger-trigger {
+    width: 100%;
+    height: 48px;
+    padding: 0 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 1rem;
+    background-color: white;
+    color: var(--text-dark);
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+}
+
+.search-field-group input:focus,
+.search-field-group select:focus {
+    outline: none;
+    border-color: var(--primary-purple);
+    box-shadow: 0 0 0 2px rgba(106, 13, 173, 0.1);
+}
+
+/* Swap Button */
+.swap-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 1px solid var(--border-color);
+    background: white;
+    color: var(--text-gray);
+    font-size: 1.2rem;
+    cursor: pointer;
+    margin-bottom: 4px; /* Align with inputs */
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.swap-btn:hover {
+    background-color: #f0f0f0;
+    color: var(--primary-purple);
+    border-color: var(--primary-purple);
+}
+
+/* Main Search Button */
+.main-search-btn {
+    background-color: var(--primary-purple);
+    color: white;
+    border: none;
+    height: 48px;
+    padding: 0 2rem;
+    border-radius: 4px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    min-width: 140px;
+}
+
+.main-search-btn:hover {
+    background-color: var(--primary-purple-hover);
+}
+
+/* Passenger Popover */
+.passenger-popover {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    padding: 1rem;
+    margin-top: 0.5rem;
+    z-index: 100;
+    min-width: 280px;
+}
+
+.popover-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid #eee;
+}
+
+.popover-row:last-child {
+    border-bottom: none;
+}
+
+.popover-label {
+    display: flex;
+    flex-direction: column;
+}
+
+.popover-label span {
+    font-weight: 600;
+    color: var(--text-dark);
+}
+
+.popover-label small {
+    font-size: 0.75rem;
+    color: var(--text-gray);
+}
+
+.popover-counter {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.popover-counter button {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 1px solid var(--border-color);
+    background: white;
+    color: var(--primary-purple);
+    font-size: 1.2rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.popover-counter button:disabled {
+    color: #ccc;
+    border-color: #eee;
+    cursor: not-allowed;
+}
+
+.popover-counter button:hover:not(:disabled) {
+    background-color: #f9f0ff;
+    border-color: var(--primary-purple);
+}
+
+.popover-counter span {
+    font-weight: 600;
+    min-width: 20px;
+    text-align: center;
+}
+
+/* Results Section (Reused) */
 .results-section {
     padding: 2rem;
     width: 100%;
@@ -272,6 +392,13 @@
 .line::before { left: 0; }
 .line::after { right: 0; }
 
+.days-info {
+    font-size: 0.75rem;
+    color: #666;
+    margin-top: 4px;
+    text-align: center;
+}
+
 .meta-info {
     display: flex;
     gap: 1rem;
@@ -296,7 +423,7 @@
 }
 
 .book-btn {
-    background-color: #1a1a1a;
+    background-color: var(--primary-purple);
     color: white;
     border: none;
     padding: 0.75rem 1.5rem;
@@ -307,7 +434,7 @@
 }
 
 .book-btn:hover {
-    background-color: #333;
+    background-color: var(--primary-purple-hover);
 }
 
 .no-results {
@@ -318,46 +445,25 @@
     color: #666;
 }
 
-/* Responsive Adjustments */
+/* Responsive */
 @media (max-width: 992px) {
-    .search-form {
+    .search-bar-row {
         flex-wrap: wrap;
     }
-
-    .form-group {
+    .search-field-group {
         min-width: 45%;
     }
-
-    .search-btn {
+    .swap-btn {
+        display: none; /* Hide swap on mobile for simplicity */
+    }
+    .main-search-btn {
         width: 100%;
-        margin-top: 10px;
-    }
-}
-
-@media (max-width: 768px) {
-    .result-card {
-        flex-direction: column;
-        gap: 1.5rem;
-        align-items: flex-start;
-    }
-
-    .book-btn {
-        width: 100%;
-    }
-
-    .time-info {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 1rem;
-    }
-
-    .duration-line {
-        display: none; /* Hide visual line on mobile */
+        margin-top: 1rem;
     }
 }
 
 @media (max-width: 576px) {
-    .form-group {
+    .search-field-group {
         min-width: 100%;
     }
 }
