@@ -1,6 +1,12 @@
+/*
+   App.css - Cleaned up to prevent layout interference.
+   Global resets are now handled in index.css
+*/
+
+/* Ensure no default padding or centering on the root app container */
 #root {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  text-align: left;
 }
