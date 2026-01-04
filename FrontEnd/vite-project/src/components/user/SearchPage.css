@@ -328,6 +328,20 @@
     box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
 
+.result-card.selected {
+    border: 2px solid var(--primary-purple);
+    background-color: #f9f5fc;
+}
+
+.selected-badge {
+    background-color: var(--primary-purple);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
 .route-info {
     flex: 1;
 }

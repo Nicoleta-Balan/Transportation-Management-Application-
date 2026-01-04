@@ -395,6 +395,77 @@
     margin-bottom: 1.5rem;
     padding-bottom: 1rem;
     border-bottom: 1px solid var(--border-color);
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+}
+
+/* Currency Selector */
+.currency-selector {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.currency-label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-gray);
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+}
+
+.currency-select {
+    padding: 0.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 0.9rem;
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    background-color: var(--white);
+    cursor: pointer;
+}
+
+.currency-select:focus {
+    outline: none;
+    border-color: var(--primary-purple);
+}
+
+.exchange-rate-info {
+    font-size: 0.75rem;
+    color: var(--text-gray);
+    font-style: italic;
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+}
+
+/* Trip Sections */
+.trip-section {
+    margin-bottom: 1rem;
+}
+
+.trip-section-return {
+    border-top: 1px solid var(--border-color);
+    padding-top: 1rem;
+}
+
+.trip-label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+    color: var(--primary-purple);
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+}
+
+/* Price Section Labels */
+.price-section-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-gray);
+    margin-bottom: 0.25rem;
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+}
+
+.price-section-label-return {
+    margin-top: 0.75rem;
 }
 
 /* Trip Visual */

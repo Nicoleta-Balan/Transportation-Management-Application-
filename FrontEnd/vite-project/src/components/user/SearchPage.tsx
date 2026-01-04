@@ -13,6 +13,7 @@ export default function SearchPage() {
     const [fromStationId, setFromStationId] = useState<string>('');
     const [toStationId, setToStationId] = useState<string>('');
     const [date, setDate] = useState('');
+    const [returnDate, setReturnDate] = useState('');
     const [tripType, setTripType] = useState<'oneWay' | 'roundTrip'>('oneWay');
     
     // Passenger State
@@ -26,6 +27,9 @@ export default function SearchPage() {
 
     // Results State
     const [searchResults, setSearchResults] = useState<Timetable[]>([]);
+    const [returnResults, setReturnResults] = useState<Timetable[]>([]);
+    const [selectedOutbound, setSelectedOutbound] = useState<Timetable | null>(null);
+    const [selectedReturn, setSelectedReturn] = useState<Timetable | null>(null);
     const [searched, setSearched] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -55,6 +59,11 @@ export default function SearchPage() {
             return;
         }
 
+        if (tripType === 'roundTrip' && !returnDate) {
+            setError('Please select a return date');
+            return;
+        }
+
         if (fromStationId === toStationId) {
             setError('Origin and destination cannot be the same');
             return;
@@ -63,27 +72,43 @@ export default function SearchPage() {
         setLoading(true);
         setError(null);
         setSearched(true);
+        setSelectedOutbound(null);
+        setSelectedReturn(null);
 
         try {
-            const results = await timetableApi.searchTimetables(
+            // Search outbound routes
+            const outboundResults = await timetableApi.searchTimetables(
                 parseInt(fromStationId),
                 parseInt(toStationId),
                 date
             );
-            setSearchResults(results || []);
+            setSearchResults(outboundResults || []);
+
+            // Search return routes if round-trip
+            if (tripType === 'roundTrip' && returnDate) {
+                const returnResultsData = await timetableApi.searchTimetables(
+                    parseInt(toStationId),
+                    parseInt(fromStationId),
+                    returnDate
+                );
+                setReturnResults(returnResultsData || []);
+            } else {
+                setReturnResults([]);
+            }
         } catch (err: unknown) {
             console.error('Search failed:', err);
             const errorMessage = err instanceof Error ? err.message : 'Unknown error';
             setError(`Failed to search: ${errorMessage}`);
             setSearchResults([]);
+            setReturnResults([]);
         } finally {
             setLoading(false);
         }
     };
 
     const handleBookClick = (timetable: Timetable) => {
-        const totalPassengers = passengers.adult + passengers.child; // Bikes don't count as seats usually
-        
+        const totalPassengers = passengers.adult + passengers.child;
+
         navigate('/booking', {
             state: {
                 route: timetable.route,
@@ -93,8 +118,35 @@ export default function SearchPage() {
                 passengerBreakdown: {
                     adult: passengers.adult,
                     child: passengers.child,
-                    student: 0 // Mapping bike to student or handling separately? For now 0.
+                    student: 0
                 }
+            }
+        });
+    };
+
+    const handleRoundTripBook = () => {
+        if (!selectedOutbound || !selectedReturn) {
+            setError('Please select both outbound and return journeys');
+            return;
+        }
+
+        const totalPassengers = passengers.adult + passengers.child;
+
+        navigate('/booking', {
+            state: {
+                route: selectedOutbound.route,
+                timetable: selectedOutbound,
+                date: date,
+                passengers: totalPassengers,
+                passengerBreakdown: {
+                    adult: passengers.adult,
+                    child: passengers.child,
+                    student: 0
+                },
+                isRoundTrip: true,
+                returnRoute: selectedReturn.route,
+                returnTimetable: selectedReturn,
+                returnDate: returnDate
             }
         });
     };
@@ -225,11 +277,17 @@ export default function SearchPage() {
                             />
                         </div>
 
-                        {/* Return Date (Optional/Disabled for One Way) */}
+                        {/* Return Date (Only for Round Trip) */}
                         {tripType === 'roundTrip' && (
                             <div className="search-field-group date-field">
                                 <label>Return</label>
-                                <input type="date" disabled placeholder="Optional" />
+                                <input
+                                    type="date"
+                                    value={returnDate}
+                                    min={date || new Date().toISOString().split('T')[0]}
+                                    onChange={(e) => setReturnDate(e.target.value)}
+                                    required
+                                />
                             </div>
                         )}
 
@@ -317,66 +375,164 @@ export default function SearchPage() {
                 </div>
             </div>
 
-            {/* Results Section (Same as before) */}
+            {/* Results Section */}
             {searched && (
                 <div className="results-section">
                     <div className="results-container">
-                        <h2>Available Routes for {new Date(date).toLocaleDateString()} ({getDayName(date)})</h2>
                         {loading ? (
                             <div className="loading-message">Finding the best routes for you...</div>
-                        ) : searchResults.length > 0 ? (
-                            <div className="results-list">
-                                {searchResults.map(timetable => {
-                                    const fromStop = timetable.timetableStops.find(s => s.station.id === parseInt(fromStationId));
-                                    const toStop = timetable.timetableStops.find(s => s.station.id === parseInt(toStationId));
-                                    
-                                    if (!fromStop || !toStop) return null;
-
-                                    const departureTime = new Date(fromStop.departureTime || fromStop.arrivalTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                                    const arrivalTime = new Date(toStop.arrivalTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                                    
-                                    return (
-                                        <div key={timetable.id} className="result-card">
-                                            <div className="route-info">
-                                                <div className="time-info">
-                                                    <div className="departure">
-                                                        <span className="time">{departureTime}</span>
-                                                        <span className="station">{fromStop.station.name}</span>
-                                                    </div>
-                                                    <div className="duration-line">
-                                                        <span className="duration">{formatDuration(timetable.route.durationMinutes)}</span>
-                                                        <div className="line"></div>
-                                                        <span className="days-info">
-                                                            {timetable.daysOfWeek && timetable.daysOfWeek.length > 0 
-                                                                ? timetable.daysOfWeek.join(', ') 
-                                                                : 'Daily'}
-                                                        </span>
-                                                    </div>
-                                                    <div className="arrival">
-                                                        <span className="time">{arrivalTime}</span>
-                                                        <span className="station">{toStop.station.name}</span>
-                                                    </div>
-                                                </div>
-                                                <div className="meta-info">
-                                                    <span className="vehicle-class">{timetable.route.vehicleClass}</span>
-                                                    <span className="distance">{timetable.route.distance} km</span>
-                                                </div>
-                                            </div>
-                                            <button 
-                                                className="book-btn"
-                                                onClick={() => handleBookClick(timetable)}
-                                            >
-                                                Book Now
-                                            </button>
-                                        </div>
-                                    );
-                                })}
-                            </div>
                         ) : (
-                            <div className="no-results">
-                                <p>No routes found for the selected criteria.</p>
-                                <p>Try changing the date or stations.</p>
-                            </div>
+                            <>
+                                {/* Outbound Results */}
+                                <h2>
+                                    {tripType === 'roundTrip' ? 'Outbound: ' : ''}
+                                    {new Date(date).toLocaleDateString()} ({getDayName(date)})
+                                </h2>
+                                {searchResults.length > 0 ? (
+                                    <div className="results-list">
+                                        {searchResults.map(timetable => {
+                                            const fromStop = timetable.timetableStops.find(s => s.station.id === parseInt(fromStationId));
+                                            const toStop = timetable.timetableStops.find(s => s.station.id === parseInt(toStationId));
+
+                                            if (!fromStop || !toStop) return null;
+
+                                            const departureTime = new Date(fromStop.departureTime || fromStop.arrivalTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                                            const arrivalTime = new Date(toStop.arrivalTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                                            const isSelected = selectedOutbound?.id === timetable.id;
+
+                                            return (
+                                                <div
+                                                    key={timetable.id}
+                                                    className={`result-card ${tripType === 'roundTrip' && isSelected ? 'selected' : ''}`}
+                                                    onClick={() => tripType === 'roundTrip' && setSelectedOutbound(timetable)}
+                                                    style={tripType === 'roundTrip' ? { cursor: 'pointer' } : {}}
+                                                >
+                                                    <div className="route-info">
+                                                        <div className="time-info">
+                                                            <div className="departure">
+                                                                <span className="time">{departureTime}</span>
+                                                                <span className="station">{fromStop.station.name}</span>
+                                                            </div>
+                                                            <div className="duration-line">
+                                                                <span className="duration">{formatDuration(timetable.route.durationMinutes)}</span>
+                                                                <div className="line"></div>
+                                                                <span className="days-info">
+                                                                    {timetable.daysOfWeek && timetable.daysOfWeek.length > 0
+                                                                        ? timetable.daysOfWeek.join(', ')
+                                                                        : 'Daily'}
+                                                                </span>
+                                                            </div>
+                                                            <div className="arrival">
+                                                                <span className="time">{arrivalTime}</span>
+                                                                <span className="station">{toStop.station.name}</span>
+                                                            </div>
+                                                        </div>
+                                                        <div className="meta-info">
+                                                            <span className="vehicle-class">{timetable.route.vehicleClass}</span>
+                                                            <span className="distance">{timetable.route.distance} km</span>
+                                                        </div>
+                                                    </div>
+                                                    {tripType === 'oneWay' && (
+                                                        <button
+                                                            className="book-btn"
+                                                            onClick={() => handleBookClick(timetable)}
+                                                        >
+                                                            Book Now
+                                                        </button>
+                                                    )}
+                                                    {tripType === 'roundTrip' && isSelected && (
+                                                        <div className="selected-badge">Selected</div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                ) : (
+                                    <div className="no-results">
+                                        <p>No outbound routes found for the selected criteria.</p>
+                                        <p>Try changing the date or stations.</p>
+                                    </div>
+                                )}
+
+                                {/* Return Results (only for round-trip) */}
+                                {tripType === 'roundTrip' && returnDate && (
+                                    <>
+                                        <h2 style={{ marginTop: '2rem' }}>
+                                            Return: {new Date(returnDate).toLocaleDateString()} ({getDayName(returnDate)})
+                                        </h2>
+                                        {returnResults.length > 0 ? (
+                                            <div className="results-list">
+                                                {returnResults.map(timetable => {
+                                                    const fromStop = timetable.timetableStops.find(s => s.station.id === parseInt(toStationId));
+                                                    const toStop = timetable.timetableStops.find(s => s.station.id === parseInt(fromStationId));
+
+                                                    if (!fromStop || !toStop) return null;
+
+                                                    const departureTime = new Date(fromStop.departureTime || fromStop.arrivalTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                                                    const arrivalTime = new Date(toStop.arrivalTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                                                    const isSelected = selectedReturn?.id === timetable.id;
+
+                                                    return (
+                                                        <div
+                                                            key={timetable.id}
+                                                            className={`result-card ${isSelected ? 'selected' : ''}`}
+                                                            onClick={() => setSelectedReturn(timetable)}
+                                                            style={{ cursor: 'pointer' }}
+                                                        >
+                                                            <div className="route-info">
+                                                                <div className="time-info">
+                                                                    <div className="departure">
+                                                                        <span className="time">{departureTime}</span>
+                                                                        <span className="station">{fromStop.station.name}</span>
+                                                                    </div>
+                                                                    <div className="duration-line">
+                                                                        <span className="duration">{formatDuration(timetable.route.durationMinutes)}</span>
+                                                                        <div className="line"></div>
+                                                                        <span className="days-info">
+                                                                            {timetable.daysOfWeek && timetable.daysOfWeek.length > 0
+                                                                                ? timetable.daysOfWeek.join(', ')
+                                                                                : 'Daily'}
+                                                                        </span>
+                                                                    </div>
+                                                                    <div className="arrival">
+                                                                        <span className="time">{arrivalTime}</span>
+                                                                        <span className="station">{toStop.station.name}</span>
+                                                                    </div>
+                                                                </div>
+                                                                <div className="meta-info">
+                                                                    <span className="vehicle-class">{timetable.route.vehicleClass}</span>
+                                                                    <span className="distance">{timetable.route.distance} km</span>
+                                                                </div>
+                                                            </div>
+                                                            {isSelected && (
+                                                                <div className="selected-badge">Selected</div>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        ) : (
+                                            <div className="no-results">
+                                                <p>No return routes found for the selected criteria.</p>
+                                                <p>Try changing the return date.</p>
+                                            </div>
+                                        )}
+
+                                        {/* Book Round Trip Button */}
+                                        {selectedOutbound && selectedReturn && (
+                                            <div style={{ textAlign: 'center', marginTop: '2rem' }}>
+                                                <button
+                                                    className="book-btn"
+                                                    onClick={handleRoundTripBook}
+                                                    style={{ padding: '1rem 3rem', fontSize: '1.1rem' }}
+                                                >
+                                                    Book Round Trip
+                                                </button>
+                                            </div>
+                                        )}
+                                    </>
+                                )}
+                            </>
                         )}
                     </div>
                 </div>

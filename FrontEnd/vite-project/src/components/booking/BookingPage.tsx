@@ -5,28 +5,32 @@ import type { Stripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import './BookingPage.css';
 
-const API_BASE_URL = 'http://localhost:8080/api';
+const API_BASE_URL = '/api';
 
 // --- Types ---
+interface RouteType {
+    id: number;
+    originStation: { id: number; name: string };
+    destinationStation: { id: number; name: string };
+    distance: number;
+    durationMinutes: number;
+    pricePerKm?: number;
+    vehicleCapacity?: number;
+    vehicleClass?: 'STANDARD' | 'COACH' | 'MINI_BUS' | 'DOUBLE_DECKER';
+}
+
+interface TimetableType {
+    id: number;
+    timetableStops: Array<{
+        station: { id: number };
+        arrivalTime: string;
+        departureTime: string | null;
+    }>;
+}
+
 interface LocationState {
-    route: {
-        id: number;
-        originStation: { id: number; name: string };
-        destinationStation: { id: number; name: string };
-        distance: number;
-        durationMinutes: number;
-        pricePerKm?: number;
-        vehicleCapacity?: number;
-        vehicleClass?: 'STANDARD' | 'COACH' | 'MINI_BUS' | 'DOUBLE_DECKER';
-    };
-    timetable: {
-        id: number;
-        timetableStops: Array<{
-            station: { id: number };
-            arrivalTime: string;
-            departureTime: string | null;
-        }>;
-    };
+    route: RouteType;
+    timetable: TimetableType;
     date: string;
     passengers: number;
     passengerBreakdown: {
@@ -34,6 +38,11 @@ interface LocationState {
         child: number;
         student: number;
     };
+    // Round-trip fields
+    isRoundTrip?: boolean;
+    returnRoute?: RouteType;
+    returnTimetable?: TimetableType;
+    returnDate?: string;
 }
 
 interface Passenger {
@@ -45,10 +54,10 @@ interface Passenger {
 }
 
 // --- Constants ---
-const PRICE_PER_KM = 0.15;
-const LUGGAGE_PRICE = 5.00;
-const SEAT_RESERVATION_PRICE = 3.00;
-const SERVICE_FEE = 1.50;
+const PRICE_PER_KM = 0.75; // RON per km
+const LUGGAGE_PRICE = 25.00; // RON
+const SEAT_RESERVATION_PRICE = 15.00; // RON
+const SERVICE_FEE = 7.50; // RON
 
 const PASSENGER_MULTIPLIERS = {
     Adult: 1,
@@ -56,13 +65,31 @@ const PASSENGER_MULTIPLIERS = {
     Student: 0.8 // 20% discount
 };
 
+// Supported currencies
+type Currency = 'RON' | 'EUR' | 'USD' | 'GBP';
+
+interface ExchangeRates {
+    EUR: number;
+    USD: number;
+    GBP: number;
+}
+
+const CURRENCY_SYMBOLS: Record<Currency, string> = {
+    RON: 'RON',
+    EUR: 'EUR',
+    USD: 'USD',
+    GBP: 'GBP'
+};
+
 // --- Payment Form Component ---
 const PaymentForm = ({
     amount,
+    currency,
     onSuccess,
     onError
 }: {
     amount: number;
+    currency: string;
     onSuccess: () => void;
     onError: (error: string) => void;
 }) => {
@@ -115,7 +142,7 @@ const PaymentForm = ({
                 disabled={!stripe || isProcessing}
                 type="submit"
             >
-                {isProcessing ? 'Processing...' : `Pay EUR ${amount.toFixed(2)}`}
+                {isProcessing ? 'Processing...' : `Pay ${amount.toFixed(2)} ${currency}`}
             </button>
         </form>
     );
@@ -124,11 +151,13 @@ const PaymentForm = ({
 // --- Payment Wrapper Component ---
 const PaymentSection = ({
     amount,
+    currency,
     description,
     onSuccess,
     onError
 }: {
     amount: number;
+    currency: Currency;
     description: string;
     onSuccess: () => void;
     onError: (error: string) => void;
@@ -137,6 +166,14 @@ const PaymentSection = ({
     const [stripePromise, setStripePromise] = useState<Promise<Stripe | null> | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+
+    // Map currency to Stripe currency codes
+    const stripeCurrencyMap: Record<Currency, string> = {
+        RON: 'ron',
+        EUR: 'eur',
+        USD: 'usd',
+        GBP: 'gbp'
+    };
 
     useEffect(() => {
         const initializePayment = async () => {
@@ -148,13 +185,13 @@ const PaymentSection = ({
 
                 setStripePromise(loadStripe(config.publicKey));
 
-                // Then create the payment intent
+                // Then create the payment intent with selected currency
                 const paymentResponse = await fetch(`${API_BASE_URL}/payments/create-payment-intent`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        amount: Math.round(amount * 100), // Convert to cents
-                        currency: 'eur',
+                        amount: Math.round(amount * 100), // Convert to cents/bani
+                        currency: stripeCurrencyMap[currency],
                         description: description
                     })
                 });
@@ -174,7 +211,7 @@ const PaymentSection = ({
         if (amount > 0) {
             initializePayment();
         }
-    }, [amount, description]);
+    }, [amount, currency, description]);
 
     if (loading) {
         return (
@@ -221,6 +258,7 @@ const PaymentSection = ({
         <Elements stripe={stripePromise} options={options}>
             <PaymentForm
                 amount={amount}
+                currency={currency}
                 onSuccess={onSuccess}
                 onError={onError}
             />
@@ -341,7 +379,7 @@ const SeatMap = ({
             )}
 
             <p className="seat-info-text">
-                Select a seat for EUR {SEAT_RESERVATION_PRICE.toFixed(2)} or skip to get a random seat assigned for free at check-in.
+                Select a seat for {SEAT_RESERVATION_PRICE.toFixed(2)} RON or skip to get a random seat assigned for free at check-in.
             </p>
         </div>
     );
@@ -359,13 +397,13 @@ export default function BookingPage() {
 
     if (!state) return null;
 
-    const { route, timetable, passengerBreakdown } = state;
+    const { route, timetable, passengerBreakdown, isRoundTrip, returnRoute, returnTimetable, returnDate } = state;
 
     // Initialize passengers based on breakdown
     const [passengers, setPassengers] = useState<Passenger[]>(() => {
         const initialPassengers: Passenger[] = [];
         let idCounter = 0;
-        
+
         // Add Adults
         for (let i = 0; i < (passengerBreakdown?.adult || 0); i++) {
             initialPassengers.push({ id: idCounter++, type: 'Adult', firstName: '', lastName: '' });
@@ -378,14 +416,14 @@ export default function BookingPage() {
         for (let i = 0; i < (passengerBreakdown?.student || 0); i++) {
             initialPassengers.push({ id: idCounter++, type: 'Student', firstName: '', lastName: '' });
         }
-        
+
         // Fallback if no breakdown provided (legacy support)
         if (initialPassengers.length === 0 && state.passengers > 0) {
             for (let i = 0; i < state.passengers; i++) {
                 initialPassengers.push({ id: i, type: 'Adult', firstName: '', lastName: '' });
             }
         }
-        
+
         return initialPassengers;
     });
 
@@ -395,18 +433,69 @@ export default function BookingPage() {
     const [paymentSuccess, setPaymentSuccess] = useState(false);
     const [paymentError, setPaymentError] = useState<string | null>(null);
 
+    // Currency state
+    const [selectedCurrency, setSelectedCurrency] = useState<Currency>('RON');
+    const [exchangeRates, setExchangeRates] = useState<ExchangeRates>({ EUR: 4.97, USD: 4.56, GBP: 5.78 });
+    const [ratesLoading, setRatesLoading] = useState(true);
+
+    // Fetch BNR exchange rates from backend
+    useEffect(() => {
+        const fetchBNRRates = async () => {
+            try {
+                const response = await fetch(`${API_BASE_URL}/exchange-rates`);
+                if (!response.ok) throw new Error('Failed to fetch rates');
+
+                const rates = await response.json();
+                setExchangeRates({
+                    EUR: rates.EUR || 4.97,
+                    USD: rates.USD || 4.56,
+                    GBP: rates.GBP || 5.78
+                });
+            } catch (error) {
+                console.log('Using fallback exchange rates');
+                setExchangeRates({ EUR: 4.97, USD: 4.56, GBP: 5.78 });
+            } finally {
+                setRatesLoading(false);
+            }
+        };
+
+        fetchBNRRates();
+    }, []);
+
+    // Convert RON to selected currency
+    const convertPrice = (ronAmount: number): number => {
+        if (selectedCurrency === 'RON') return ronAmount;
+        return ronAmount / exchangeRates[selectedCurrency];
+    };
+
+    // Format price with currency
+    const formatPrice = (ronAmount: number): string => {
+        const converted = convertPrice(ronAmount);
+        return `${converted.toFixed(2)} ${CURRENCY_SYMBOLS[selectedCurrency]}`;
+    };
+
     // Calculations
     const basePrice = (route.distance || 0) * (route.pricePerKm || PRICE_PER_KM);
+    const returnBasePrice = isRoundTrip && returnRoute
+        ? (returnRoute.distance || 0) * (returnRoute.pricePerKm || PRICE_PER_KM)
+        : 0;
 
     const calculateTotal = () => {
-        const ticketsTotal = passengers.reduce((sum, p) => {
+        // Outbound tickets
+        const outboundTicketsTotal = passengers.reduce((sum, p) => {
             return sum + (basePrice * PASSENGER_MULTIPLIERS[p.type]);
         }, 0);
-        
+
+        // Return tickets (if round-trip)
+        const returnTicketsTotal = isRoundTrip ? passengers.reduce((sum, p) => {
+            return sum + (returnBasePrice * PASSENGER_MULTIPLIERS[p.type]);
+        }, 0) : 0;
+
         const extrasTotal = luggageCount * LUGGAGE_PRICE;
         const seatsTotal = selectedSeats.length * SEAT_RESERVATION_PRICE;
-        
-        return ticketsTotal + extrasTotal + seatsTotal + SERVICE_FEE;
+
+        // Service fee applied once for round-trip, not doubled
+        return outboundTicketsTotal + returnTicketsTotal + extrasTotal + seatsTotal + SERVICE_FEE;
     };
 
     const total = calculateTotal();
@@ -461,7 +550,7 @@ export default function BookingPage() {
                         <p><strong>From:</strong> {route.originStation?.name}</p>
                         <p><strong>To:</strong> {route.destinationStation?.name}</p>
                         <p><strong>Date:</strong> {state.date}</p>
-                        <p><strong>Total Paid:</strong> EUR {total.toFixed(2)}</p>
+                        <p><strong>Total Paid:</strong> {formatPrice(total)}</p>
                         <button
                             className="pay-btn"
                             onClick={() => navigate('/')}
@@ -588,8 +677,12 @@ export default function BookingPage() {
                             <h2>Payment</h2>
                         </div>
                         <PaymentSection
-                            amount={total}
-                            description={`Booking: ${route.originStation?.name} to ${route.destinationStation?.name}`}
+                            amount={convertPrice(total)}
+                            currency={selectedCurrency}
+                            description={isRoundTrip
+                                ? `Round Trip: ${route.originStation?.name} ↔ ${route.destinationStation?.name}`
+                                : `Booking: ${route.originStation?.name} → ${route.destinationStation?.name}`
+                            }
                             onSuccess={handlePaymentSuccess}
                             onError={handlePaymentError}
                         />
@@ -604,56 +697,133 @@ export default function BookingPage() {
                 {/* RIGHT COLUMN - SUMMARY */}
                 <div className="booking-right-column">
                     <div className="summary-card">
-                        <div className="summary-header">Your Booking</div>
-                        
-                        <div className="trip-visual">
-                            <div className="trip-point">
-                                <div className="time">{departureTime}</div>
-                                <div className="timeline-marker">
-                                    <div className="dot"></div>
-                                    <div className="line"></div>
+                        <div className="summary-header">
+                            {isRoundTrip ? 'Round Trip Booking' : 'Your Booking'}
+                        </div>
+
+                        {/* Currency Selector */}
+                        <div className="currency-selector">
+                            <label className="currency-label">Currency:</label>
+                            <select
+                                className="currency-select"
+                                value={selectedCurrency}
+                                onChange={(e) => setSelectedCurrency(e.target.value as Currency)}
+                            >
+                                <option value="RON">RON (Lei)</option>
+                                <option value="EUR">EUR</option>
+                                <option value="USD">USD</option>
+                                <option value="GBP">GBP</option>
+                            </select>
+                            {!ratesLoading && selectedCurrency !== 'RON' && (
+                                <span className="exchange-rate-info">
+                                    1 {selectedCurrency} = {exchangeRates[selectedCurrency].toFixed(4)} RON (BNR)
+                                </span>
+                            )}
+                        </div>
+
+                        {/* Outbound Journey */}
+                        <div className="trip-section">
+                            {isRoundTrip && <div className="trip-label">Outbound - {state.date}</div>}
+                            <div className="trip-visual">
+                                <div className="trip-point">
+                                    <div className="time">{departureTime}</div>
+                                    <div className="timeline-marker">
+                                        <div className="dot"></div>
+                                        <div className="line"></div>
+                                    </div>
+                                    <div className="station-name">{route.originStation?.name || "Origin"}</div>
                                 </div>
-                                <div className="station-name">{route.originStation?.name || "Origin"}</div>
-                            </div>
-                            <div className="trip-point">
-                                <div className="time">{arrivalTime}</div>
-                                <div className="timeline-marker">
-                                    <div className="dot"></div>
+                                <div className="trip-point">
+                                    <div className="time">{arrivalTime}</div>
+                                    <div className="timeline-marker">
+                                        <div className="dot"></div>
+                                    </div>
+                                    <div className="station-name">{route.destinationStation?.name || "Destination"}</div>
                                 </div>
-                                <div className="station-name">{route.destinationStation?.name || "Destination"}</div>
                             </div>
                         </div>
 
+                        {/* Return Journey (if round-trip) */}
+                        {isRoundTrip && returnRoute && returnTimetable && (
+                            <div className="trip-section trip-section-return">
+                                <div className="trip-label">Return - {returnDate}</div>
+                                <div className="trip-visual">
+                                    <div className="trip-point">
+                                        <div className="time">
+                                            {(() => {
+                                                const returnOriginStop = returnTimetable.timetableStops.find(s => s.station.id === returnRoute.originStation.id);
+                                                return returnOriginStop?.departureTime ? new Date(returnOriginStop.departureTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : "--:--";
+                                            })()}
+                                        </div>
+                                        <div className="timeline-marker">
+                                            <div className="dot"></div>
+                                            <div className="line"></div>
+                                        </div>
+                                        <div className="station-name">{returnRoute.originStation?.name || "Origin"}</div>
+                                    </div>
+                                    <div className="trip-point">
+                                        <div className="time">
+                                            {(() => {
+                                                const returnDestStop = returnTimetable.timetableStops.find(s => s.station.id === returnRoute.destinationStation.id);
+                                                return returnDestStop?.arrivalTime ? new Date(returnDestStop.arrivalTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : "--:--";
+                                            })()}
+                                        </div>
+                                        <div className="timeline-marker">
+                                            <div className="dot"></div>
+                                        </div>
+                                        <div className="station-name">{returnRoute.destinationStation?.name || "Destination"}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         <div className="price-breakdown">
+                            {/* Outbound tickets */}
+                            <div className="price-section-label">
+                                {isRoundTrip ? 'Outbound' : 'Tickets'}
+                            </div>
                             {passengers.map((p, i) => (
-                                <div key={i} className="price-row">
+                                <div key={`out-${i}`} className="price-row">
                                     <span>1 {p.type}</span>
-                                    <span>${(basePrice * PASSENGER_MULTIPLIERS[p.type]).toFixed(2)}</span>
+                                    <span>{formatPrice(basePrice * PASSENGER_MULTIPLIERS[p.type])}</span>
                                 </div>
                             ))}
-                            
+
+                            {/* Return tickets */}
+                            {isRoundTrip && (
+                                <>
+                                    <div className="price-section-label price-section-label-return">Return</div>
+                                    {passengers.map((p, i) => (
+                                        <div key={`ret-${i}`} className="price-row">
+                                            <span>1 {p.type}</span>
+                                            <span>{formatPrice(returnBasePrice * PASSENGER_MULTIPLIERS[p.type])}</span>
+                                        </div>
+                                    ))}
+                                </>
+                            )}
+
                             {luggageCount > 0 && (
                                 <div className="price-row">
                                     <span>{luggageCount} x Luggage</span>
-                                    <span>${(luggageCount * LUGGAGE_PRICE).toFixed(2)}</span>
+                                    <span>{formatPrice(luggageCount * LUGGAGE_PRICE)}</span>
                                 </div>
                             )}
-                            
+
                             {selectedSeats.length > 0 && (
                                 <div className="price-row">
                                     <span>{selectedSeats.length} x Seat Reservation</span>
-                                    <span>${(selectedSeats.length * SEAT_RESERVATION_PRICE).toFixed(2)}</span>
+                                    <span>{formatPrice(selectedSeats.length * SEAT_RESERVATION_PRICE)}</span>
                                 </div>
                             )}
 
                             <div className="price-row">
                                 <span>Service Fee</span>
-                                <span>${SERVICE_FEE.toFixed(2)}</span>
+                                <span>{formatPrice(SERVICE_FEE)}</span>
                             </div>
 
                             <div className="price-row total">
                                 <span>Total</span>
-                                <span>${total.toFixed(2)}</span>
+                                <span>{formatPrice(total)}</span>
                             </div>
                         </div>
                     </div>
