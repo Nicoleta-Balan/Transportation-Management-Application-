@@ -18,6 +18,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -44,9 +45,6 @@ public class RouteControllerTest {
     @MockBean
     private RouteService routeService;
 
-    // Note: RouteRepository is NOT mocked - Spring Data REST needs real repositories
-    // to initialize its handler mapping for @RepositoryRestController
-
     private Route testRoute;
     private Station testStationA;
     private Station testStationB;
@@ -54,20 +52,18 @@ public class RouteControllerTest {
 
     @BeforeEach
     void setUp() {
-        // Create test stations
-        testStationA = new Station("Origin Station", "Description A", "Address A", 
+        testStationA = new Station("Origin Station", "Description A", "Address A",
                                    47.1788, 27.56716, StationStatus.ACTIVE);
         testStationA.setId(1L);
 
-        testStationB = new Station("Intermediary Station", "Description B", "Address B", 
+        testStationB = new Station("Intermediary Station", "Description B", "Address B",
                                    47.1888, 27.57716, StationStatus.ACTIVE);
         testStationB.setId(2L);
 
-        testStationC = new Station("Destination Station", "Description C", "Address C", 
+        testStationC = new Station("Destination Station", "Description C", "Address C",
                                    47.1988, 27.58716, StationStatus.ACTIVE);
         testStationC.setId(3L);
 
-        // Create test route with route stops
         testRoute = new Route();
         testRoute.setId(1L);
         testRoute.setVehicleClass(VehicleClass.STANDARD);
@@ -77,7 +73,7 @@ public class RouteControllerTest {
         testRoute.setDescription("Test Route");
 
         List<RouteStop> stops = new ArrayList<>();
-        
+
         RouteStop stop1 = new RouteStop();
         stop1.setRoute(testRoute);
         stop1.setStation(testStationA);
@@ -113,30 +109,24 @@ public class RouteControllerTest {
 
     @Test
     public void whenGetAllRoutes_thenReturns200Ok() throws Exception {
-        // Spring Data REST handles GET /api/routes using real repository
-        // With empty database, expect empty collection or 200 OK
         mockMvc.perform(get("/api/routes"))
                 .andExpect(status().isOk());
     }
 
     @Test
     public void whenGetRouteById_withValidId_thenReturns200Ok() throws Exception {
-        // Spring Data REST handles GET /api/routes/{id} using real repository
-        // With empty database, Spring Data REST may return 500 if entity metadata isn't found
-        // This is expected behavior when testing with real repositories but empty database
         mockMvc.perform(get("/api/routes/1"))
-                .andExpect(status().is5xxServerError()); // Spring Data REST returns 500 when entity not found
+                .andExpect(status().is5xxServerError());
     }
 
     @Test
     public void whenGetRouteById_withInvalidId_thenReturns404NotFound() throws Exception {
-        // Spring Data REST handles GET /api/routes/{id} using real repository
-        // With empty database, Spring Data REST may return 500 if entity metadata isn't found
         mockMvc.perform(get("/api/routes/999"))
-                .andExpect(status().is5xxServerError()); // Spring Data REST returns 500 when entity not found
+                .andExpect(status().is5xxServerError());
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     public void whenCreateRoute_withValidData_thenReturns201Created() throws Exception {
         CreateRouteRequest request = new CreateRouteRequest();
         request.setVehicleClass(VehicleClass.STANDARD);
@@ -180,9 +170,10 @@ public class RouteControllerTest {
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     public void whenCreateRoute_withInvalidData_thenReturns400BadRequest() throws Exception {
         CreateRouteRequest request = new CreateRouteRequest();
-        request.setVehicleClass(null); // Invalid: null vehicle class
+        request.setVehicleClass(null);
         request.setDistance(100.0);
         request.setDurationMinutes(90);
         request.setDescription("New Route");
@@ -211,6 +202,7 @@ public class RouteControllerTest {
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     public void whenCreateRoute_withTooFewStops_thenReturns400BadRequest() throws Exception {
         CreateRouteRequest request = new CreateRouteRequest();
         request.setVehicleClass(VehicleClass.STANDARD);
@@ -226,7 +218,6 @@ public class RouteControllerTest {
         stop1.setDurationMinutesFromPrevious(0);
         stops.add(stop1);
 
-        // Only 1 stop - invalid (needs at least 2)
         request.setStops(stops);
 
         mockMvc.perform(post("/api/routes")
@@ -236,10 +227,11 @@ public class RouteControllerTest {
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     public void whenCreateRoute_withInvalidDistance_thenReturns400BadRequest() throws Exception {
         CreateRouteRequest request = new CreateRouteRequest();
         request.setVehicleClass(VehicleClass.STANDARD);
-        request.setDistance(0.5); // Invalid: less than 1 km
+        request.setDistance(0.5);
         request.setDurationMinutes(90);
         request.setDescription("New Route");
 
@@ -267,6 +259,7 @@ public class RouteControllerTest {
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     public void whenUpdateRoute_withValidData_thenReturns200Ok() throws Exception {
         UpdateRouteRequest request = new UpdateRouteRequest();
         request.setVehicleClass(VehicleClass.STANDARD);
@@ -312,6 +305,7 @@ public class RouteControllerTest {
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     public void whenUpdateRoute_withInvalidId_thenReturns404NotFound() throws Exception {
         UpdateRouteRequest request = new UpdateRouteRequest();
         request.setVehicleClass(VehicleClass.STANDARD);
@@ -346,6 +340,7 @@ public class RouteControllerTest {
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     public void whenDeleteRoute_withValidId_thenReturns204NoContent() throws Exception {
         doNothing().when(routeService).deleteRoute(1L);
 
@@ -356,6 +351,7 @@ public class RouteControllerTest {
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     public void whenDeleteRoute_withInvalidId_thenReturns404NotFound() throws Exception {
         doThrow(new ResourceNotFoundException("Route", 999L))
                 .when(routeService).deleteRoute(999L);
@@ -365,5 +361,35 @@ public class RouteControllerTest {
 
         verify(routeService, times(1)).deleteRoute(999L);
     }
-}
 
+    @Test
+    public void whenCreateRoute_withoutAuth_thenReturns403Forbidden() throws Exception {
+        CreateRouteRequest request = new CreateRouteRequest();
+        request.setVehicleClass(VehicleClass.STANDARD);
+        request.setDistance(100.0);
+        request.setDurationMinutes(90);
+        request.setDescription("New Route");
+
+        List<RouteStopRequest> stops = new ArrayList<>();
+        RouteStopRequest stop1 = new RouteStopRequest();
+        stop1.setStationId(1L);
+        stop1.setSequenceOrder(0);
+        stop1.setDistanceFromPrevious(0.0);
+        stop1.setDurationMinutesFromPrevious(0);
+        stops.add(stop1);
+
+        RouteStopRequest stop2 = new RouteStopRequest();
+        stop2.setStationId(2L);
+        stop2.setSequenceOrder(1);
+        stop2.setDistanceFromPrevious(100.0);
+        stop2.setDurationMinutesFromPrevious(90);
+        stops.add(stop2);
+
+        request.setStops(stops);
+
+        mockMvc.perform(post("/api/routes")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isForbidden());
+    }
+}

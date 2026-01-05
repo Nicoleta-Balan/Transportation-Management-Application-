@@ -1,0 +1,263 @@
+/* Auth Pages Styles - Purple Theme matching BookingPage */
+
+.auth-page {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #6A0DAD 0%, #4a0a7a 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+}
+
+.auth-container {
+    width: 100%;
+    max-width: 440px;
+}
+
+.auth-container-wide {
+    max-width: 560px;
+}
+
+.auth-card {
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    padding: 2.5rem;
+    position: relative;
+}
+
+.back-to-home {
+    position: absolute;
+    top: 1rem;
+    left: 1rem;
+    background: none;
+    border: none;
+    color: #6A0DAD;
+    font-size: 0.875rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.5rem;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+.back-to-home:hover {
+    background-color: #f9f0ff;
+}
+
+.back-to-home::before {
+    content: '\2190';
+    font-size: 1rem;
+}
+
+.auth-header {
+    text-align: center;
+    margin-bottom: 2rem;
+    margin-top: 1rem;
+}
+
+.auth-header h1 {
+    color: #333333;
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin: 0 0 0.5rem 0;
+}
+
+.auth-header p {
+    color: #666666;
+    font-size: 1rem;
+    margin: 0;
+}
+
+.auth-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.auth-error {
+    background-color: #fdf2f2;
+    border: 1px solid #f8d7da;
+    color: #dc3545;
+    padding: 0.75rem 1rem;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    text-align: center;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    flex: 1;
+}
+
+.form-row {
+    display: flex;
+    gap: 1rem;
+}
+
+.form-group label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #333333;
+}
+
+.form-group input {
+    padding: 0.875rem 1rem;
+    border: 1px solid #dddddd;
+    border-radius: 6px;
+    font-size: 1rem;
+    transition: all 0.2s;
+    width: 100%;
+    box-sizing: border-box;
+    background-color: #ffffff;
+    color: #333333;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: #6A0DAD;
+    box-shadow: 0 0 0 3px rgba(106, 13, 173, 0.15);
+}
+
+.form-group input::placeholder {
+    color: #aaa;
+}
+
+.password-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.password-input-wrapper input {
+    padding-right: 3rem;
+}
+
+.password-toggle {
+    position: absolute;
+    right: 0.75rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.25rem;
+    color: #666666;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s;
+}
+
+.password-toggle:hover {
+    color: #6A0DAD;
+}
+
+.form-links {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.forgot-link {
+    color: #6A0DAD;
+    font-size: 0.875rem;
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.forgot-link:hover {
+    color: #580a91;
+    text-decoration: underline;
+}
+
+.auth-submit-btn {
+    background-color: #6A0DAD;
+    color: #ffffff;
+    border: none;
+    padding: 1rem;
+    border-radius: 6px;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    margin-top: 0.5rem;
+}
+
+.auth-submit-btn:hover:not(:disabled) {
+    background-color: #580a91;
+}
+
+.auth-submit-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.auth-footer {
+    text-align: center;
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #dddddd;
+}
+
+.auth-footer p {
+    color: #666666;
+    font-size: 0.9rem;
+    margin: 0;
+}
+
+.auth-link {
+    color: #6A0DAD;
+    font-weight: 600;
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.auth-link:hover {
+    color: #580a91;
+    text-decoration: underline;
+}
+
+/* Placeholder content for forgot password */
+.placeholder-content {
+    text-align: center;
+    padding: 2rem 0;
+}
+
+.placeholder-icon {
+    color: #6A0DAD;
+    margin-bottom: 1.5rem;
+    opacity: 0.8;
+}
+
+.placeholder-text {
+    color: #666666;
+    margin-bottom: 2rem;
+    line-height: 1.6;
+}
+
+/* Responsive */
+@media (max-width: 576px) {
+    .auth-page {
+        padding: 1rem;
+    }
+
+    .auth-card {
+        padding: 1.5rem;
+    }
+
+    .form-row {
+        flex-direction: column;
+    }
+
+    .auth-header h1 {
+        font-size: 1.5rem;
+    }
+
+    .back-to-home {
+        position: static;
+        margin-bottom: 1rem;
+    }
+}

@@ -42,6 +42,39 @@
     letter-spacing: -0.5px;
 }
 
+.header-actions {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+}
+
+.header-btn {
+    padding: 0.5rem 1.25rem;
+    background: var(--primary-purple);
+    color: white;
+    border: 1px solid var(--primary-purple);
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+}
+
+.header-btn:hover {
+    background: var(--primary-purple-hover);
+    border-color: var(--primary-purple-hover);
+}
+
+.header-btn-outline {
+    background: transparent;
+    color: var(--primary-purple);
+}
+
+.header-btn-outline:hover {
+    background: var(--primary-purple);
+    color: white;
+}
+
 .admin-btn {
     padding: 0.5rem 1rem;
     background: transparent;
