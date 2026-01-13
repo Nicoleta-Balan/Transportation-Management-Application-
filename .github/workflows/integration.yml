@@ -35,6 +35,15 @@ jobs:
       - name: Stop and Remove Existing Stack
         run: docker compose down
 
+      # Create .env file with secrets for docker-compose
+      - name: Inject Secrets
+        run: |
+          cat > .env << EOF
+          JWT_SECRET=${{ secrets.JWT_SECRET }}
+          STRIPE_SECRET_KEY=${{ secrets.STRIPE_SECRET_KEY }}
+          STRIPE_PUBLIC_KEY=${{ secrets.STRIPE_PUBLIC_KEY }}
+          EOF
+
       # Build Docker Images for ALL services and Deploy
       # This single command builds the 'app' (using the root Dockerfile)
       # and the 'frontend' (using the root Dockerfile and the Node builder)
