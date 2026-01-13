@@ -6,9 +6,9 @@
   <component name="ChangeListManager">
     <list default="true" id="51b781ba-7615-480b-bc91-8fdccad7fd2d" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/FrontEnd/vite-project/nginx.conf" beforeDir="false" afterPath="$PROJECT_DIR$/FrontEnd/vite-project/nginx.conf" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/docker-compose.yml" beforeDir="false" afterPath="$PROJECT_DIR$/docker-compose.yml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/multitier/trans/config/SecurityConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/multitier/trans/config/SecurityConfig.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/resources/application.properties" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/application.properties" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -16,7 +16,7 @@
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
   <component name="EmbeddingIndexingInfo">
-    <option name="cachedIndexableFilesCount" value="258" />
+    <option name="cachedIndexableFilesCount" value="260" />
     <option name="fileBasedEmbeddingIndicesEnabled" value="true" />
   </component>
   <component name="FileTemplateManagerImpl">
@@ -251,7 +251,7 @@
       <workItem from="1767539140430" duration="3760000" />
       <workItem from="1767617905102" duration="5799000" />
       <workItem from="1767712620239" duration="7684000" />
-      <workItem from="1768305918981" duration="9429000" />
+      <workItem from="1768305918981" duration="13988000" />
     </task>
     <servers />
   </component>
