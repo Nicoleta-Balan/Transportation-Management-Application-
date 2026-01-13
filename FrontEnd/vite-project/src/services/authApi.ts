@@ -16,6 +16,14 @@ async function handleResponse<T>(response: Response): Promise<T> {
     return response.json();
 }
 
+export interface UpdateProfileRequest {
+    firstName?: string;
+    lastName?: string;
+    phone?: string;
+    address?: string;
+    dateOfBirth?: string;
+}
+
 export const authApi = {
     async login(credentials: LoginRequest): Promise<AuthResponse> {
         const response = await fetch(`${AUTH_URL}/login`, {
@@ -41,6 +49,18 @@ export const authApi = {
                 'Content-Type': 'application/json',
                 ...getAuthHeader(),
             },
+        });
+        return handleResponse<User>(response);
+    },
+
+    async updateProfile(data: UpdateProfileRequest): Promise<User> {
+        const response = await fetch(`${AUTH_URL}/me`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                ...getAuthHeader(),
+            },
+            body: JSON.stringify(data),
         });
         return handleResponse<User>(response);
     },

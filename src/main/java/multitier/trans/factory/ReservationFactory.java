@@ -36,11 +36,23 @@ public class ReservationFactory {
         newReservation.setSeatCount(request.getSeatCount());
         newReservation.setPassengerCategory(request.getPassengerCategory());
         newReservation.setVehicleClass(request.getVehicleClass());
-        newReservation.setStatus(ReservationStatus.PENDING); // Default status
+        newReservation.setStatus(ReservationStatus.CONFIRMED); // Changed to CONFIRMED as payment is done before this call
         newReservation.setRoute(route);
         newReservation.setTripDetails(tripDetails);
+        
+        // Map selected seats if provided
+        if (request.getSelectedSeats() != null && !request.getSelectedSeats().isEmpty()) {
+            newReservation.setSelectedSeats(String.join(",", request.getSelectedSeats()));
+        }
+
+        // Set payment details
+        if (request.getTotalPrice() != null) {
+            newReservation.setTotalPrice(request.getTotalPrice());
+        }
+        if (request.getCurrency() != null) {
+            newReservation.setCurrency(request.getCurrency());
+        }
 
         return newReservation;
     }
 }
-

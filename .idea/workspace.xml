@@ -1,0 +1,294 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="51b781ba-7615-480b-bc91-8fdccad7fd2d" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="EmbeddingIndexingInfo">
+    <option name="cachedIndexableFilesCount" value="258" />
+    <option name="fileBasedEmbeddingIndicesEnabled" value="true" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Interface" />
+        <option value="Class" />
+        <option value="CSS File" />
+        <option value="TypeScript File" />
+      </list>
+    </option>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_BRANCH_BY_REPOSITORY">
+      <map>
+        <entry key="$PROJECT_DIR$" value="feature/user-authentication" />
+      </map>
+    </option>
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;assignee&quot;: &quot;NicoletaChihaia&quot;
+  }
+}</component>
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/NicoletaChihaia/Transportation-Management-Application-.git&quot;,
+    &quot;accountId&quot;: &quot;01b5ea6c-c98a-44de-976c-d5c30fef269a&quot;
+  }
+}</component>
+  <component name="KubernetesApiPersistence">{}</component>
+  <component name="KubernetesApiProvider">{
+  &quot;isMigrated&quot;: true
+}</component>
+  <component name="McpProjectServerCommands">
+    <commands />
+    <urls />
+  </component>
+  <component name="PackageJsonUpdateNotifier">
+    <dismissed value="$PROJECT_DIR$/FrontEnd/vite-project/package.json" />
+  </component>
+  <component name="ProblemsViewState">
+    <option name="selectedTabId" value="CurrentFile" />
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 0
+}</component>
+  <component name="ProjectId" id="34LHqZ9OeUBjFWbcIXg29cEN9YQ" />
+  <component name="ProjectLevelVcsManager">
+    <ConfirmationsSetting value="1" id="Add" />
+  </component>
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ASKED_SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
+    &quot;JUnit.ReservationControllerTest.executor&quot;: &quot;Run&quot;,
+    &quot;JUnit.ReservationControllerTest.whenCreateReservation_withInvalidData_thenReturns400BadRequest.executor&quot;: &quot;Run&quot;,
+    &quot;JUnit.ReservationControllerTest.whenCreateReservation_withValidData_thenReturns201Created.executor&quot;: &quot;Run&quot;,
+    &quot;Maven.TransportationMaven [clean].executor&quot;: &quot;Run&quot;,
+    &quot;Maven.TransportationMaven [package].executor&quot;: &quot;Run&quot;,
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.MCP Project settings loaded&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
+    &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
+    &quot;com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;user-authentication&quot;,
+    &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
+    &quot;junie.onboarding.icon.badge.shown&quot;: &quot;true&quot;,
+    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/balan/IdeaProjects/Transportation-Management-Application-&quot;,
+    &quot;list.type.of.created.stylesheet&quot;: &quot;CSS&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;onboarding.tips.debug.path&quot;: &quot;C:/Users/balan/IdeaProjects/Transportation-Management-Application/src/main/java/multitier/trans/Main.java&quot;,
+    &quot;project.structure.last.edited&quot;: &quot;Project&quot;,
+    &quot;project.structure.proportion&quot;: &quot;0.15&quot;,
+    &quot;project.structure.side.proportion&quot;: &quot;0.2&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.pluginManager&quot;,
+    &quot;to.speed.mode.migration.done&quot;: &quot;true&quot;,
+    &quot;ts.external.directory.path&quot;: &quot;C:\\Users\\balan\\IdeaProjects\\Transportation-Management-Application-\\FrontEnd\\vite-project\\node_modules\\typescript\\lib&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  }
+}</component>
+  <component name="RecapSpentCounter">
+    <option name="endsOfQuotaMs" value="1769115613011" />
+    <option name="spentUsd" value="0.0318076" />
+  </component>
+  <component name="RecapUselessUpdatesCounter">
+    <option name="suspendCountdown" value="0" />
+  </component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="C:\Users\balan\IdeaProjects\Transportation-Management-Application" />
+    </key>
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\Users\balan\IdeaProjects\Transportation-Management-Application-\FrontEnd\vite-project\src\assets\images" />
+      <recent name="C:\Users\balan\IdeaProjects\Transportation-Management-Application-\.github\workflows" />
+      <recent name="C:\Users\balan\IdeaProjects\Transportation-Management-Application\src\main\java\multitier\trans" />
+    </key>
+    <key name="MoveClassesOrPackagesDialog.RECENTS_KEY">
+      <recent name="multitier.trans.controllers" />
+      <recent name="" />
+    </key>
+  </component>
+  <component name="RunManager" selected="JUnit.ReservationControllerTest.whenCreateReservation_withInvalidData_thenReturns400BadRequest">
+    <configuration name="ReservationControllerTest" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
+      <module name="TransportationMaven" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="multitier.trans.controllers.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <option name="PACKAGE_NAME" value="multitier.trans.controllers" />
+      <option name="MAIN_CLASS_NAME" value="multitier.trans.controllers.ReservationControllerTest" />
+      <option name="TEST_OBJECT" value="class" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="ReservationControllerTest.whenCreateReservation_withInvalidData_thenReturns400BadRequest" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
+      <module name="TransportationMaven" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="multitier.trans.controllers.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <option name="PACKAGE_NAME" value="multitier.trans.controllers" />
+      <option name="MAIN_CLASS_NAME" value="multitier.trans.controllers.ReservationControllerTest" />
+      <option name="METHOD_NAME" value="whenCreateReservation_withInvalidData_thenReturns400BadRequest" />
+      <option name="TEST_OBJECT" value="method" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="ReservationControllerTest.whenCreateReservation_withValidData_thenReturns201Created" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
+      <module name="TransportationMaven" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="multitier.trans.controllers.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <option name="PACKAGE_NAME" value="multitier.trans.controllers" />
+      <option name="MAIN_CLASS_NAME" value="multitier.trans.controllers.ReservationControllerTest" />
+      <option name="METHOD_NAME" value="whenCreateReservation_withValidData_thenReturns201Created" />
+      <option name="TEST_OBJECT" value="method" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration default="true" type="JetRunConfigurationType">
+      <module name="Transportation-Management-Application-" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration default="true" type="KotlinStandaloneScriptRunConfigurationType">
+      <module name="Transportation-Management-Application-" />
+      <option name="filePath" />
+      <method v="2" />
+    </configuration>
+    <configuration name="TestDockerCIPipeline" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
+      <module name="TransportationMaven" />
+      <option name="SPRING_BOOT_MAIN_CLASS" value="multitier.trans.TestDockerCIPipeline" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="TmsApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
+      <module name="TransportationMaven" />
+      <option name="SPRING_BOOT_MAIN_CLASS" value="multitier.trans.TmsApplication" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <recent_temporary>
+      <list>
+        <item itemvalue="JUnit.ReservationControllerTest.whenCreateReservation_withInvalidData_thenReturns400BadRequest" />
+        <item itemvalue="JUnit.ReservationControllerTest" />
+        <item itemvalue="JUnit.ReservationControllerTest.whenCreateReservation_withValidData_thenReturns201Created" />
+      </list>
+    </recent_temporary>
+  </component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-jdk-30f59d01ecdd-26cb7f24e5b0-intellij.indexing.shared.core-IU-253.29346.138" />
+        <option value="bundled-js-predefined-d6986cc7102b-9b0f141eb926-JavaScript-IU-253.29346.138" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="StructureViewState">
+    <option name="selectedTab" value="Logical" />
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="51b781ba-7615-480b-bc91-8fdccad7fd2d" name="Changes" comment="" />
+      <created>1760986125536</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1760986125536</updated>
+      <workItem from="1764269465282" duration="2331000" />
+      <workItem from="1764400119797" duration="15383000" />
+      <workItem from="1764522117789" duration="13641000" />
+      <workItem from="1764591598423" duration="11126000" />
+      <workItem from="1764625895316" duration="348000" />
+      <workItem from="1764626461325" duration="3738000" />
+      <workItem from="1764675481863" duration="444000" />
+      <workItem from="1764675955541" duration="23453000" />
+      <workItem from="1764864398381" duration="1068000" />
+      <workItem from="1764915859488" duration="2000" />
+      <workItem from="1765788573477" duration="8486000" />
+      <workItem from="1765822627018" duration="9000" />
+      <workItem from="1767278169913" duration="11089000" />
+      <workItem from="1767302177636" duration="12868000" />
+      <workItem from="1767315518403" duration="260000" />
+      <workItem from="1767315809636" duration="15446000" />
+      <workItem from="1767426426956" duration="7590000" />
+      <workItem from="1767434377202" duration="41591000" />
+      <workItem from="1767539140430" duration="3760000" />
+      <workItem from="1767617905102" duration="5799000" />
+      <workItem from="1767712620239" duration="7684000" />
+      <workItem from="1768305918981" duration="7861000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" type="java-method">
+          <url>file://$PROJECT_DIR$/src/main/java/multitier/trans/service/RouteService.java</url>
+          <line>21</line>
+          <properties class="multitier.trans.service.RouteService">
+            <option name="EMULATED" value="true" />
+            <option name="WATCH_EXIT" value="false" />
+          </properties>
+          <option name="timeStamp" value="1" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/src/test/java/multitier/trans/controllers/ReservationControllerTest.java</url>
+          <line>38</line>
+          <option name="timeStamp" value="2" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
+  </component>
+  <component name="XSLT-Support.FileAssociations.UIState">
+    <expand />
+    <select />
+  </component>
+</project>

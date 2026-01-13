@@ -55,6 +55,9 @@ public class SecurityConfig {
                 .requestMatchers("/api/exchange-rates/**").permitAll()
                 .requestMatchers("/api/payments/**").permitAll()
 
+                // Seat management - allow public access for booking flow
+                .requestMatchers("/api/seats/**").permitAll()
+
                 // Admin-only endpoints - Station management
                 .requestMatchers(HttpMethod.POST, "/api/stations/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.PUT, "/api/stations/**").hasRole("ADMIN")

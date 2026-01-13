@@ -8,6 +8,8 @@ import org.springframework.data.rest.webmvc.support.RepositoryEntityLinks;
 import org.springframework.hateoas.EntityModel;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -55,11 +57,23 @@ public class ReservationRestController {
                 content = @Content(schema = @Schema(implementation = CreateReservationRequest.class))
             )
             @Valid @RequestBody CreateReservationRequest request) {
-        
-        Reservation created = reservationService.createReservation(request);
+
+        // Get current authentication from SecurityContext (works with @RepositoryRestController)
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String userEmail = (authentication != null && authentication.isAuthenticated()
+                && !"anonymousUser".equals(authentication.getPrincipal()))
+                ? authentication.getName() : null;
+
+        Reservation created;
+        if (userEmail != null) {
+            created = reservationService.createReservationForUser(request, userEmail);
+        } else {
+            created = reservationService.createReservation(request);
+        }
+
         EntityModel<Reservation> resource = EntityModelUtils.createEntityModelSafe(
             created, Reservation.class, entityLinks);
-        
+
         return ResponseEntity
             .status(HttpStatus.CREATED)
             .body(resource);
@@ -117,4 +131,3 @@ public class ReservationRestController {
         return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).build();
     }
 }
-

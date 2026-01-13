@@ -51,6 +51,9 @@ public class AuthService {
                 .email(user.getEmail())
                 .firstName(user.getFirstName())
                 .lastName(user.getLastName())
+                .phone(user.getPhone())
+                .address(user.getAddress())
+                .dateOfBirth(user.getDateOfBirth())
                 .userType(user.getUserType())
                 .build();
     }
@@ -77,6 +80,9 @@ public class AuthService {
                 .email(user.getEmail())
                 .firstName(user.getFirstName())
                 .lastName(user.getLastName())
+                .phone(user.getPhone())
+                .address(user.getAddress())
+                .dateOfBirth(user.getDateOfBirth())
                 .userType(user.getUserType())
                 .build();
     }
@@ -84,6 +90,43 @@ public class AuthService {
     public UserProfileResponse getCurrentUser(String email) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new BusinessException("User not found"));
+
+        return UserProfileResponse.builder()
+                .id(user.getId())
+                .email(user.getEmail())
+                .firstName(user.getFirstName())
+                .lastName(user.getLastName())
+                .phone(user.getPhone())
+                .address(user.getAddress())
+                .dateOfBirth(user.getDateOfBirth())
+                .userType(user.getUserType())
+                .createdAt(user.getCreatedAt())
+                .build();
+    }
+
+    @Transactional
+    public UserProfileResponse updateProfile(String email, UpdateProfileRequest request) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new BusinessException("User not found"));
+
+        // Update only non-null fields
+        if (request.getFirstName() != null && !request.getFirstName().isBlank()) {
+            user.setFirstName(request.getFirstName().trim());
+        }
+        if (request.getLastName() != null && !request.getLastName().isBlank()) {
+            user.setLastName(request.getLastName().trim());
+        }
+        if (request.getPhone() != null) {
+            user.setPhone(request.getPhone().trim());
+        }
+        if (request.getAddress() != null) {
+            user.setAddress(request.getAddress().trim());
+        }
+        if (request.getDateOfBirth() != null) {
+            user.setDateOfBirth(request.getDateOfBirth());
+        }
+
+        userRepository.save(user);
 
         return UserProfileResponse.builder()
                 .id(user.getId())

@@ -32,6 +32,9 @@ export interface AuthResponse {
     email: string;
     firstName: string;
     lastName: string;
+    phone?: string;
+    address?: string;
+    dateOfBirth?: string;
     userType: UserType;
 }
 

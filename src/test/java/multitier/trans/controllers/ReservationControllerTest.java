@@ -22,7 +22,6 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
-import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -31,6 +30,7 @@ import java.time.LocalDateTime;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -98,7 +98,6 @@ public class ReservationControllerTest {
     }
 
     @Test
-    @WithMockUser(roles = "USER")
     public void whenCreateReservation_withValidData_thenReturns201Created() throws Exception {
         CreateReservationRequest request = new CreateReservationRequest();
         request.setRouteId(1L);
@@ -119,9 +118,12 @@ public class ReservationControllerTest {
         savedReservation.setPassengerCategory(PassengerCategory.ADULT);
         savedReservation.setVehicleClass(VehicleClass.STANDARD);
 
+        // Mock both methods since controller uses createReservationForUser when authenticated
         when(reservationService.createReservation(any(CreateReservationRequest.class))).thenReturn(savedReservation);
+        when(reservationService.createReservationForUser(any(CreateReservationRequest.class), any(String.class))).thenReturn(savedReservation);
 
         mockMvc.perform(post("/api/reservations")
+                        .with(user("testuser@test.com").roles("USER"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
@@ -130,7 +132,6 @@ public class ReservationControllerTest {
     }
 
     @Test
-    @WithMockUser(roles = "USER")
     public void whenCancelReservation_withValidId_thenReturns200OK() throws Exception {
         Reservation cancelledReservation = new Reservation();
         cancelledReservation.setId(1L);
@@ -142,14 +143,14 @@ public class ReservationControllerTest {
 
         when(reservationService.cancelReservation(1L)).thenReturn(cancelledReservation);
 
-        mockMvc.perform(put("/api/reservations/1/cancel"))
+        mockMvc.perform(put("/api/reservations/1/cancel")
+                        .with(user("testuser@test.com").roles("USER")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(1L))
                 .andExpect(jsonPath("$.status").value("CANCELLED"));
     }
 
     @Test
-    @WithMockUser(roles = "USER")
     public void whenCreateReservation_withInvalidData_thenReturns400BadRequest() throws Exception {
         CreateReservationRequest request = new CreateReservationRequest();
         request.setRouteId(1L);
@@ -161,6 +162,7 @@ public class ReservationControllerTest {
         request.setVehicleClass(VehicleClass.STANDARD);
 
         mockMvc.perform(post("/api/reservations")
+                        .with(user("testuser@test.com").roles("USER"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest());
