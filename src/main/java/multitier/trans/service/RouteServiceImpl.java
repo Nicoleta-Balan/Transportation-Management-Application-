@@ -140,6 +140,12 @@ public class RouteServiceImpl implements RouteService {
             
             // Add new stops to the collection
             existingRoute.getRouteStops().addAll(newStops);
+            
+            // Update origin and destination stations
+            if (!newStops.isEmpty()) {
+                existingRoute.setOriginStation(newStops.get(0).getStation());
+                existingRoute.setDestinationStation(newStops.get(newStops.size() - 1).getStation());
+            }
         }
 
         // Save route (stops will be saved via cascade)

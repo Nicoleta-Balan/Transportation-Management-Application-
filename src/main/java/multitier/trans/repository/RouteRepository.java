@@ -54,4 +54,9 @@ public interface RouteRepository extends JpaRepository<Route, Long> {
     @Query("SELECT DISTINCT r FROM Route r LEFT JOIN FETCH r.routeStops rs LEFT JOIN FETCH rs.station WHERE r.id = :id")
     @RestResource(exported = true, path = "findByIdWithStops", rel = "findByIdWithStops")
     Optional<Route> findByIdWithStops(@Param("id") Long id);
+
+    // Simple query to get routes with origin and destination stations (no stops)
+    @Query("SELECT r FROM Route r LEFT JOIN FETCH r.originStation LEFT JOIN FETCH r.destinationStation")
+    @RestResource(exported = false)
+    List<Route> findAllSimple();
 }

@@ -4,6 +4,7 @@ import multitier.trans.dto.CreateTimetableRequest;
 import multitier.trans.dto.UpdateTimetableRequest;
 import multitier.trans.model.Timetable;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -18,5 +19,6 @@ public interface TimetableService {
     Timetable updateTimetable(Long id, UpdateTimetableRequest request);
 
     void deleteTimetable(Long id);
-}
 
+    List<Timetable> searchTimetables(Long fromStationId, Long toStationId, LocalDate date);
+}

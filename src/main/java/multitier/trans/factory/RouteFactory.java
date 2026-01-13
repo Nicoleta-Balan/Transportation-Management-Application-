@@ -54,6 +54,12 @@ public class RouteFactory {
         // This ensures JPA change tracking works correctly and the bidirectional relationship is maintained
         route.setRouteStops(stops);
         
+        // Set origin and destination stations explicitly
+        if (!stops.isEmpty()) {
+            route.setOriginStation(stops.get(0).getStation());
+            route.setDestinationStation(stops.get(stops.size() - 1).getStation());
+        }
+        
         // Verify stops were added to the collection
         if (route.getRouteStops().size() != stops.size()) {
             throw new IllegalStateException(
@@ -71,4 +77,3 @@ public class RouteFactory {
         return description;
     }
 }
-

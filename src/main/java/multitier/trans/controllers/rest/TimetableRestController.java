@@ -4,7 +4,6 @@ import multitier.trans.dto.CreateTimetableRequest;
 import multitier.trans.dto.UpdateTimetableRequest;
 import multitier.trans.model.Timetable;
 import multitier.trans.service.TimetableService;
-import org.springframework.data.rest.webmvc.RepositoryRestController;
 import org.springframework.data.rest.webmvc.support.RepositoryEntityLinks;
 import org.springframework.hateoas.EntityModel;
 import org.springframework.http.HttpStatus;
@@ -24,7 +23,8 @@ import multitier.trans.utils.EntityModelUtils;
 import java.util.List;
 
 @Tag(name = "Timetables", description = "API for managing transportation timetables")
-@RepositoryRestController
+@RestController
+@RequestMapping("/api/timetables")
 @RequiredArgsConstructor
 public class TimetableRestController {
     
@@ -50,7 +50,7 @@ public class TimetableRestController {
             description = "Route not found"
         )
     })
-    @PostMapping("/timetables")
+    @PostMapping
     public ResponseEntity<EntityModel<Timetable>> createTimetable(
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
                 description = "Timetable creation request",
@@ -87,7 +87,7 @@ public class TimetableRestController {
             description = "Timetable not found"
         )
     })
-    @PutMapping("/timetables/{id}")
+    @PutMapping("/{id}")
     public ResponseEntity<EntityModel<Timetable>> updateTimetable(
             @Parameter(description = "Timetable ID", required = true, example = "1")
             @PathVariable Long id,
@@ -119,7 +119,7 @@ public class TimetableRestController {
             description = "Timetable not found"
         )
     })
-    @DeleteMapping("/timetables/{id}")
+    @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteTimetable(
             @Parameter(description = "Timetable ID", required = true, example = "1")
             @PathVariable Long id) {
@@ -142,15 +142,12 @@ public class TimetableRestController {
             description = "Route not found"
         )
     })
-    @GetMapping("/timetables/route/{routeId}")
+    @GetMapping("/route/{routeId}")
     public ResponseEntity<List<Timetable>> getTimetablesByRouteId(
             @Parameter(description = "Route ID", required = true, example = "1")
             @PathVariable Long routeId) {
         
         List<Timetable> timetables = timetableService.findAllTimetablesByRouteId(routeId);
-        // Return timetables directly (not wrapped in EntityModel) for compatibility with frontend
-        // Same pattern as RouteRestController.getAllRoutes()
         return ResponseEntity.ok(timetables);
     }
 }
-
