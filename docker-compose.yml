@@ -40,9 +40,8 @@ services:
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
       STRIPE_PUBLIC_KEY: ${STRIPE_PUBLIC_KEY}
       JWT_SECRET: ${JWT_SECRET}
-      # CORS Configuration - Allow frontend container, localhost, and cloud IPs
-      # The patterns http://*:3000 and http://*:5173 in SecurityConfig handle dynamic IPs
-      CORS_ALLOWED_ORIGINS: http://localhost:3000,http://localhost:5173,http://frontend:5173,http://34.185.180.188:3000
+      # CORS Configuration - Allow frontend container, localhost, and production domain
+      CORS_ALLOWED_ORIGINS: http://localhost:3000,http://localhost:5173,https://tmsapp.dev,https://www.tmsapp.dev
     networks:
       - tms-network
     restart: always
@@ -55,9 +54,12 @@ services:
       context: ./FrontEnd
       dockerfile: vite-project/Dockerfile
     container_name: tms_frontend_app
-    # Map host port 3000 to the container's NGINX port 5173
     ports:
-      - "3000:5173"
+      - "80:80"
+      - "443:443"
+    volumes:
+      # Mount entire letsencrypt directory (preserves symlinks)
+      - /etc/letsencrypt:/etc/letsencrypt:ro
     depends_on:
       - app
     networks:

@@ -4,7 +4,8 @@
       "Bash(find:*)",
       "Bash(cat:*)",
       "Bash(mvn:*)",
-      "Bash(docker-compose build:*)"
+      "Bash(docker-compose build:*)",
+      "Bash(docker exec:*)"
     ]
   }
 }
