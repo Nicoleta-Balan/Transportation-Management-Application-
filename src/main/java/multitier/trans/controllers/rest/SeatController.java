@@ -16,7 +16,11 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 
 @Tag(name = "Seats", description = "API for managing seat availability and holds")
 @RestController
@@ -40,9 +44,28 @@ public class SeatController {
             @Parameter(description = "Session ID for identifying user's held seats", required = true)
             @RequestParam String sessionId) {
 
-        LocalDateTime departure = LocalDateTime.parse(departureTime);
+        LocalDateTime departure = parseDateTime(departureTime);
         OccupiedSeatsResponse response = seatService.getOccupiedSeats(routeId, departure, sessionId);
         return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Parse datetime string handling both ISO format with 'Z' suffix and plain LocalDateTime format.
+     * Converts UTC timezone to system default timezone for consistent storage.
+     */
+    private LocalDateTime parseDateTime(String dateTimeStr) {
+        try {
+            // Try parsing as ISO instant (e.g., "2026-01-20T21:51:00.000Z")
+            if (dateTimeStr.endsWith("Z") || dateTimeStr.contains("+") || dateTimeStr.contains("-T")) {
+                Instant instant = Instant.parse(dateTimeStr);
+                return LocalDateTime.ofInstant(instant, ZoneId.systemDefault());
+            }
+        } catch (DateTimeParseException e) {
+            // Fall through to try LocalDateTime parsing
+        }
+
+        // Try parsing as LocalDateTime (e.g., "2026-01-20T21:51:00")
+        return LocalDateTime.parse(dateTimeStr);
     }
 
     @Operation(summary = "Hold seats temporarily during booking process")

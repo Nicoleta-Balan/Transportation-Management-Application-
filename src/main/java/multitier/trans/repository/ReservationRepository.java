@@ -104,7 +104,24 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
         @Param("now") LocalDateTime now);
 
     /**
-     * Find confirmed reservations for a specific route and departure time to get occupied seats
+     * Find confirmed reservations for a specific route and departure time to get occupied seats.
+     * Uses a time window (1 minute) to handle precision differences between frontend and database.
+     */
+    @Query("SELECT r FROM Reservation r " +
+           "WHERE r.route.id = :routeId " +
+           "AND r.tripDetails.departureTime >= :startTime " +
+           "AND r.tripDetails.departureTime <= :endTime " +
+           "AND r.status IN :statuses")
+    @RestResource(exported = false)
+    List<Reservation> findByRouteIdAndDepartureTimeRangeAndStatusIn(
+        @Param("routeId") Long routeId,
+        @Param("startTime") LocalDateTime startTime,
+        @Param("endTime") LocalDateTime endTime,
+        @Param("statuses") List<ReservationStatus> statuses);
+
+    /**
+     * Find confirmed reservations for a specific route and departure time to get occupied seats.
+     * @deprecated Use findByRouteIdAndDepartureTimeRangeAndStatusIn for better precision handling
      */
     @Query("SELECT r FROM Reservation r " +
            "WHERE r.route.id = :routeId " +

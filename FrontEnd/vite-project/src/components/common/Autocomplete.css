@@ -9,8 +9,8 @@
     border-radius: 0.375rem;
     font-size: 1rem;
     width: 100%;
-    color: #1f2937; /* Culoare text închisă */
-    background-color: #fff; /* Fundal alb */
+    color: #1f2937;
+    background-color: #fff;
 }
 
 .autocomplete-input:focus {
@@ -40,7 +40,7 @@
 .suggestion-item {
     padding: 0.75rem 1rem;
     cursor: pointer;
-    color: #1f2937; /* Culoare text închisă pentru sugestii */
+    color: #1f2937;
     transition: background-color 0.2s;
 }
 

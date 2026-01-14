@@ -210,10 +210,15 @@ public class ReservationServiceImpl implements ReservationService {
      * Auto-allocate seats when none are selected
      */
     private List<String> autoAllocateSeats(Route route, LocalDateTime departureTime, int seatCount) {
-        // Get already occupied seats for this route/departure
-        List<Reservation> existingReservations = reservationRepository.findByRouteIdAndDepartureTimeAndStatusIn(
+        // Use time range to find reservations (handles precision differences)
+        LocalDateTime startTime = departureTime.withSecond(0).withNano(0);
+        LocalDateTime endTime = startTime.plusMinutes(1);
+
+        // Get already occupied seats for this route/departure using time range
+        List<Reservation> existingReservations = reservationRepository.findByRouteIdAndDepartureTimeRangeAndStatusIn(
             route.getId(),
-            departureTime,
+            startTime,
+            endTime,
             Arrays.asList(ReservationStatus.PENDING, ReservationStatus.CONFIRMED)
         );
 

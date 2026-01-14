@@ -554,10 +554,24 @@
     color: var(--text-gray);
 }
 
+.price-row.subtotal {
+    margin-top: 0.5rem;
+    padding-top: 0.75rem;
+    border-top: 1px dashed var(--border-color);
+    font-weight: 500;
+    color: var(--text-dark);
+}
+
+.price-row.vat {
+    font-size: 0.85rem;
+    color: var(--text-gray);
+    font-style: italic;
+}
+
 .price-row.total {
     margin-top: 0.5rem;
     padding-top: 1rem;
-    border-top: 1px solid var(--border-color);
+    border-top: 2px solid var(--primary-purple);
     font-size: 1.25rem;
     font-weight: 800;
     color: var(--text-dark);

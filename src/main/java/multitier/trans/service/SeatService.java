@@ -45,10 +45,15 @@ public class SeatService {
     public OccupiedSeatsResponse getOccupiedSeats(Long routeId, LocalDateTime departureTime, String sessionId) {
         LocalDateTime now = LocalDateTime.now();
 
-        // Get confirmed reservation seats
-        List<Reservation> confirmedReservations = reservationRepository.findByRouteIdAndDepartureTimeAndStatusIn(
+        // Use a time window to find reservations (handles precision differences)
+        LocalDateTime startTime = departureTime.withSecond(0).withNano(0);
+        LocalDateTime endTime = startTime.plusMinutes(1);
+
+        // Get confirmed reservation seats using time range
+        List<Reservation> confirmedReservations = reservationRepository.findByRouteIdAndDepartureTimeRangeAndStatusIn(
             routeId,
-            departureTime,
+            startTime,
+            endTime,
             Arrays.asList(ReservationStatus.PENDING, ReservationStatus.CONFIRMED)
         );
 
@@ -58,8 +63,8 @@ public class SeatService {
             .map(String::trim)
             .collect(Collectors.toList());
 
-        // Get all held seats
-        List<String> allHeldSeats = seatHoldRepository.findHeldSeatNumbers(routeId, departureTime, now);
+        // Get all held seats using time range
+        List<String> allHeldSeats = seatHoldRepository.findHeldSeatNumbersByTimeRange(routeId, startTime, endTime, now);
 
         // Get seats held by current session
         List<SeatHold> myHolds = seatHoldRepository.findActiveHoldsBySession(sessionId, now);
@@ -109,10 +114,15 @@ public class SeatService {
             .collect(Collectors.toList());
         seatHoldRepository.deleteAll(existingHolds);
 
-        // Check occupied seats from confirmed reservations
-        List<Reservation> confirmedReservations = reservationRepository.findByRouteIdAndDepartureTimeAndStatusIn(
+        // Use time range to find reservations (handles precision differences)
+        LocalDateTime startTime = request.getDepartureTime().withSecond(0).withNano(0);
+        LocalDateTime endTime = startTime.plusMinutes(1);
+
+        // Check occupied seats from confirmed reservations using time range
+        List<Reservation> confirmedReservations = reservationRepository.findByRouteIdAndDepartureTimeRangeAndStatusIn(
             request.getRouteId(),
-            request.getDepartureTime(),
+            startTime,
+            endTime,
             Arrays.asList(ReservationStatus.PENDING, ReservationStatus.CONFIRMED)
         );
 
@@ -122,8 +132,8 @@ public class SeatService {
             .map(String::trim)
             .collect(Collectors.toList());
 
-        // Also check seats held by other users
-        List<String> otherHeldSeats = seatHoldRepository.findHeldSeatNumbers(request.getRouteId(), request.getDepartureTime(), now);
+        // Also check seats held by other users using time range
+        List<String> otherHeldSeats = seatHoldRepository.findHeldSeatNumbersByTimeRange(request.getRouteId(), startTime, endTime, now);
         
         // Combine occupied and held seats
         List<String> unavailableSeats = new ArrayList<>(occupiedSeats);

@@ -75,4 +75,18 @@ public interface SeatHoldRepository extends JpaRepository<SeatHold, Long> {
         @Param("routeId") Long routeId,
         @Param("departureTime") LocalDateTime departureTime,
         @Param("now") LocalDateTime now);
+
+    /**
+     * Get all held seat numbers for a route/departure using time range (handles precision differences)
+     */
+    @Query("SELECT sh.seatNumber FROM SeatHold sh " +
+           "WHERE sh.route.id = :routeId " +
+           "AND sh.departureTime >= :startTime " +
+           "AND sh.departureTime <= :endTime " +
+           "AND sh.expiresAt > :now")
+    List<String> findHeldSeatNumbersByTimeRange(
+        @Param("routeId") Long routeId,
+        @Param("startTime") LocalDateTime startTime,
+        @Param("endTime") LocalDateTime endTime,
+        @Param("now") LocalDateTime now);
 }

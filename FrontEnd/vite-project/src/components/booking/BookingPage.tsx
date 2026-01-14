@@ -62,6 +62,7 @@ const PRICE_PER_KM = 0.75; // RON per km
 const LUGGAGE_PRICE = 25.00; // RON
 const SEAT_RESERVATION_PRICE = 15.00; // RON
 const SERVICE_FEE = 7.50; // RON
+const VAT_RATE = 0.21; // 21% VAT in Romania
 
 const PASSENGER_MULTIPLIERS = {
     Adult: 1,
@@ -516,27 +517,25 @@ export default function BookingPage() {
     const [exchangeRates, setExchangeRates] = useState<ExchangeRates>({ EUR: 4.97, USD: 4.56, GBP: 5.78 });
     const [ratesLoading, setRatesLoading] = useState(true);
 
-    // Helper to combine date and time string into ISO string
+    // Helper to combine date and time string into LocalDateTime format (no timezone)
     const combineDateAndTime = (dateStr: string, timeStr: string) => {
         // dateStr is like "2023-10-25"
         // timeStr is ISO string "2023-10-25T10:30:00" or just time part
-        
+
         // Create a date object from the time string (which has the correct time but potentially wrong date)
         const timeDate = new Date(timeStr);
-        
+
         // Parse the selected date components
         const [year, month, day] = dateStr.split('-').map(Number);
-        
-        // Create a new date object based on the timeDate
-        const newDate = new Date(timeDate);
-        
-        // Update the date components to match the selected date
-        // Note: month is 0-indexed in JS Date
-        newDate.setFullYear(year);
-        newDate.setMonth(month - 1);
-        newDate.setDate(day);
-        
-        return newDate.toISOString();
+
+        // Extract time components (use UTC to avoid timezone shifts from the stored timetable)
+        const hours = timeDate.getUTCHours();
+        const minutes = timeDate.getUTCMinutes();
+        const seconds = timeDate.getUTCSeconds();
+
+        // Format as LocalDateTime (YYYY-MM-DDTHH:MM:SS) without timezone suffix
+        const pad = (n: number) => n.toString().padStart(2, '0');
+        return `${year}-${pad(month)}-${pad(day)}T${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
     };
 
     // Get departure time from timetable
@@ -630,7 +629,7 @@ export default function BookingPage() {
         ? (returnRoute.distance || 0) * (returnRoute.pricePerKm || PRICE_PER_KM)
         : 0;
 
-    const calculateTotal = () => {
+    const calculatePriceBreakdown = () => {
         // Outbound tickets
         const outboundTicketsTotal = passengers.reduce((sum, p) => {
             return sum + (basePrice * PASSENGER_MULTIPLIERS[p.type]);
@@ -644,11 +643,28 @@ export default function BookingPage() {
         const extrasTotal = luggageCount * LUGGAGE_PRICE;
         const seatsTotal = selectedSeats.length * SEAT_RESERVATION_PRICE;
 
-        // Service fee applied once for round-trip, not doubled
-        return outboundTicketsTotal + returnTicketsTotal + extrasTotal + seatsTotal + SERVICE_FEE;
+        // Subtotal before VAT (service fee is included in VAT base)
+        const subtotal = outboundTicketsTotal + returnTicketsTotal + extrasTotal + seatsTotal + SERVICE_FEE;
+
+        // Calculate VAT (19% for transport services in Romania)
+        const vatAmount = subtotal * VAT_RATE;
+
+        // Total with VAT
+        const total = subtotal + vatAmount;
+
+        return {
+            outboundTicketsTotal,
+            returnTicketsTotal,
+            extrasTotal,
+            seatsTotal,
+            subtotal,
+            vatAmount,
+            total
+        };
     };
 
-    const total = calculateTotal();
+    const priceBreakdown = calculatePriceBreakdown();
+    const total = priceBreakdown.total;
 
     // Handlers
     const handlePassengerChange = (id: number, field: keyof Passenger, value: string) => {
@@ -1118,6 +1134,16 @@ export default function BookingPage() {
                             <div className="price-row">
                                 <span>Service Fee</span>
                                 <span>{formatPrice(SERVICE_FEE)}</span>
+                            </div>
+
+                            <div className="price-row subtotal">
+                                <span>Subtotal</span>
+                                <span>{formatPrice(priceBreakdown.subtotal)}</span>
+                            </div>
+
+                            <div className="price-row vat">
+                                <span>VAT (21%)</span>
+                                <span>{formatPrice(priceBreakdown.vatAmount)}</span>
                             </div>
 
                             <div className="price-row total">

@@ -5,13 +5,13 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="51b781ba-7615-480b-bc91-8fdccad7fd2d" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.claude/settings.local.json" beforeDir="false" afterPath="$PROJECT_DIR$/.claude/settings.local.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/FrontEnd/vite-project/Dockerfile" beforeDir="false" afterPath="$PROJECT_DIR$/FrontEnd/vite-project/Dockerfile" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/FrontEnd/vite-project/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/FrontEnd/vite-project/index.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/FrontEnd/vite-project/nginx.conf" beforeDir="false" afterPath="$PROJECT_DIR$/FrontEnd/vite-project/nginx.conf" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docker-compose.yml" beforeDir="false" afterPath="$PROJECT_DIR$/docker-compose.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/multitier/trans/model/User.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/multitier/trans/model/User.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/FrontEnd/vite-project/src/components/booking/BookingPage.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/FrontEnd/vite-project/src/components/booking/BookingPage.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/FrontEnd/vite-project/src/components/common/Autocomplete.css" beforeDir="false" afterPath="$PROJECT_DIR$/FrontEnd/vite-project/src/components/common/Autocomplete.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/multitier/trans/repository/ReservationRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/multitier/trans/repository/ReservationRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/multitier/trans/repository/SeatHoldRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/multitier/trans/repository/SeatHoldRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/multitier/trans/service/ReservationServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/multitier/trans/service/ReservationServiceImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/multitier/trans/service/SeatService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/multitier/trans/service/SeatService.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -19,7 +19,7 @@
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
   <component name="EmbeddingIndexingInfo">
-    <option name="cachedIndexableFilesCount" value="260" />
+    <option name="cachedIndexableFilesCount" value="261" />
     <option name="fileBasedEmbeddingIndicesEnabled" value="true" />
   </component>
   <component name="FileTemplateManagerImpl">
@@ -254,7 +254,7 @@
       <workItem from="1767539140430" duration="3760000" />
       <workItem from="1767617905102" duration="5799000" />
       <workItem from="1767712620239" duration="7684000" />
-      <workItem from="1768305918981" duration="18805000" />
+      <workItem from="1768305918981" duration="30244000" />
     </task>
     <servers />
   </component>
@@ -288,6 +288,12 @@
           <url>file://$PROJECT_DIR$/src/test/java/multitier/trans/controllers/ReservationControllerTest.java</url>
           <line>38</line>
           <option name="timeStamp" value="2" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="javascript">
+          <url>file://$PROJECT_DIR$/FrontEnd/vite-project/src/components/auth/ProtectedRoute.tsx</url>
+          <line>35</line>
+          <properties lambdaOrdinal="-1" />
+          <option name="timeStamp" value="3" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>
