@@ -9,6 +9,7 @@ import org.springframework.data.rest.core.annotation.RepositoryRestResource;
 import org.springframework.data.rest.core.annotation.RestResource;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -23,7 +24,7 @@ import java.util.List;
     exported = true  // Allow GET operations via Spring Data REST
 )
 public interface ReservationRepository extends JpaRepository<Reservation, Long> {
-    
+
     /**
      * Disable POST/PUT operations - handled by ReservationRestController for DTOs and validation.
      * GET operations remain enabled via Spring Data REST.
@@ -31,22 +32,22 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
     @Override
     @RestResource(exported = false)
     <S extends Reservation> S save(S entity);
-    
+
     @Override
     @RestResource(exported = false)
     <S extends Reservation> List<S> saveAll(Iterable<S> entities);
-    
+
     /**
      * Disable DELETE operation - handled by ReservationRestController.
      */
     @Override
     @RestResource(exported = false)
     void deleteById(Long id);
-    
+
     @Override
     @RestResource(exported = false)
     void delete(Reservation entity);
-    
+
     @Override
     @RestResource(exported = false)
     void deleteAll(Iterable<? extends Reservation> entities);
@@ -67,6 +68,68 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
            "AND r.status IN :statuses")
     @RestResource(exported = false)
     List<Reservation> findByStationIdAndStatusIn(
-        @Param("stationId") Long stationId, 
+        @Param("stationId") Long stationId,
+        @Param("statuses") List<ReservationStatus> statuses);
+
+    /**
+     * Find all reservations for a specific user
+     */
+    @RestResource(exported = false)
+    List<Reservation> findByUserIdOrderByCreatedAtDesc(Long userId);
+
+    /**
+     * Find active reservations for a user (PENDING or CONFIRMED with future departure)
+     */
+    @Query("SELECT r FROM Reservation r " +
+           "WHERE r.user.id = :userId " +
+           "AND r.status IN :statuses " +
+           "AND r.tripDetails.departureTime >= :now " +
+           "ORDER BY r.tripDetails.departureTime ASC")
+    @RestResource(exported = false)
+    List<Reservation> findActiveReservationsByUserId(
+        @Param("userId") Long userId,
+        @Param("statuses") List<ReservationStatus> statuses,
+        @Param("now") LocalDateTime now);
+
+    /**
+     * Find past reservations for a user (completed trips)
+     */
+    @Query("SELECT r FROM Reservation r " +
+           "WHERE r.user.id = :userId " +
+           "AND r.tripDetails.departureTime < :now " +
+           "ORDER BY r.tripDetails.departureTime DESC")
+    @RestResource(exported = false)
+    List<Reservation> findPastReservationsByUserId(
+        @Param("userId") Long userId,
+        @Param("now") LocalDateTime now);
+
+    /**
+     * Find confirmed reservations for a specific route and departure time to get occupied seats.
+     * Uses a time window (1 minute) to handle precision differences between frontend and database.
+     */
+    @Query("SELECT r FROM Reservation r " +
+           "WHERE r.route.id = :routeId " +
+           "AND r.tripDetails.departureTime >= :startTime " +
+           "AND r.tripDetails.departureTime <= :endTime " +
+           "AND r.status IN :statuses")
+    @RestResource(exported = false)
+    List<Reservation> findByRouteIdAndDepartureTimeRangeAndStatusIn(
+        @Param("routeId") Long routeId,
+        @Param("startTime") LocalDateTime startTime,
+        @Param("endTime") LocalDateTime endTime,
+        @Param("statuses") List<ReservationStatus> statuses);
+
+    /**
+     * Find confirmed reservations for a specific route and departure time to get occupied seats.
+     * @deprecated Use findByRouteIdAndDepartureTimeRangeAndStatusIn for better precision handling
+     */
+    @Query("SELECT r FROM Reservation r " +
+           "WHERE r.route.id = :routeId " +
+           "AND r.tripDetails.departureTime = :departureTime " +
+           "AND r.status IN :statuses")
+    @RestResource(exported = false)
+    List<Reservation> findByRouteIdAndDepartureTimeAndStatusIn(
+        @Param("routeId") Long routeId,
+        @Param("departureTime") LocalDateTime departureTime,
         @Param("statuses") List<ReservationStatus> statuses);
 }

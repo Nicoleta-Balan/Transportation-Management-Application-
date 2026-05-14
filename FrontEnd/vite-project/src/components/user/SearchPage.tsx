@@ -2,12 +2,14 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStations } from '../../hooks/useStations';
 import { timetableApi } from '../../services/timetableApi';
+import { useAuth } from '../../contexts/AuthContext';
 import type { Timetable } from '../../types/Timetable';
 import './SearchPage.css';
 
 export default function SearchPage() {
     const navigate = useNavigate();
     const { stations } = useStations();
+    const { isAuthenticated, user, logout } = useAuth();
 
     // Search State
     const [fromStationId, setFromStationId] = useState<string>('');
@@ -194,9 +196,33 @@ export default function SearchPage() {
         <div className="search-page">
             <header className="search-header">
                 <div className="logo">BusBooking</div>
-                <button className="admin-btn" onClick={() => navigate('/admin')}>
-                    Admin Login
-                </button>
+                <div className="header-actions">
+                    {isAuthenticated ? (
+                        <>
+                            <button
+                                className="header-btn"
+                                onClick={() => navigate(user?.userType === 'ADMIN' ? '/admin' : '/dashboard')}
+                            >
+                                {user?.userType === 'ADMIN' ? 'Admin Panel' : 'My Account'}
+                            </button>
+                            <button
+                                className="header-btn header-btn-outline"
+                                onClick={() => { logout(); }}
+                            >
+                                Sign Out
+                            </button>
+                        </>
+                    ) : (
+                        <>
+                            <button className="header-btn" onClick={() => navigate('/login')}>
+                                Sign In
+                            </button>
+                            <button className="header-btn header-btn-outline" onClick={() => navigate('/register')}>
+                                Register
+                            </button>
+                        </>
+                    )}
+                </div>
             </header>
 
             <div className={`hero-section ${searched ? 'searched' : ''}`}>

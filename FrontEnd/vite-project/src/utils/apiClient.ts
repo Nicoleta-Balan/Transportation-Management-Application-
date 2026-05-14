@@ -1,7 +1,17 @@
 import { handleApiError } from './apiErrorHandler';
 
+function getAuthHeader(): Record<string, string> {
+    const token = localStorage.getItem('auth_token');
+    return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 export async function fetchWithErrorHandling<T>(url: string, options?: RequestInit): Promise<T> {
-    const response = await fetch(url, options);
+    const headers: Record<string, string> = {
+        ...getAuthHeader(),
+        ...(options?.headers as Record<string, string> || {}),
+    };
+
+    const response = await fetch(url, { ...options, headers });
     if (!response.ok) {
         throw await handleApiError(response);
     }
@@ -9,9 +19,13 @@ export async function fetchWithErrorHandling<T>(url: string, options?: RequestIn
 }
 
 export async function fetchWithoutJson(url: string, options?: RequestInit): Promise<void> {
-    const response = await fetch(url, options);
+    const headers: Record<string, string> = {
+        ...getAuthHeader(),
+        ...(options?.headers as Record<string, string> || {}),
+    };
+
+    const response = await fetch(url, { ...options, headers });
     if (!response.ok) {
         throw await handleApiError(response);
     }
 }
-

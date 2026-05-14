@@ -1,8 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { loadStripe } from '@stripe/stripe-js';
 import type { Stripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
+import { useAuth } from '../../contexts/AuthContext';
+import { seatApi, getSessionId } from '../../services/seatApi';
+import { bookingApi } from '../../services/bookingApi';
+import type { CreateReservationRequest } from '../../services/bookingApi';
 import './BookingPage.css';
 
 const API_BASE_URL = '/api';
@@ -58,6 +62,7 @@ const PRICE_PER_KM = 0.75; // RON per km
 const LUGGAGE_PRICE = 25.00; // RON
 const SEAT_RESERVATION_PRICE = 15.00; // RON
 const SERVICE_FEE = 7.50; // RON
+const VAT_RATE = 0.21; // 21% VAT in Romania
 
 const PASSENGER_MULTIPLIERS = {
     Adult: 1,
@@ -269,17 +274,34 @@ const PaymentSection = ({
 // --- Single Deck Component ---
 const SingleDeck = ({
     selectedSeats,
+    occupiedSeats,
+    heldSeats,
     onSeatSelect,
     rows,
     prefix = '',
     deckLabel
 }: {
     selectedSeats: string[],
+    occupiedSeats: string[],
+    heldSeats: string[],
     onSeatSelect: (seat: string) => void,
     rows: number[],
     prefix?: string,
     deckLabel?: string
 }) => {
+    const getSeatStatus = (seatId: string) => {
+        if (occupiedSeats.includes(seatId)) return 'occupied';
+        if (heldSeats.includes(seatId)) return 'held';
+        if (selectedSeats.includes(seatId)) return 'selected';
+        return 'available';
+    };
+
+    const handleSeatClick = (seatId: string) => {
+        const status = getSeatStatus(seatId);
+        if (status === 'occupied' || status === 'held') return; // Can't select occupied/held seats
+        onSeatSelect(seatId);
+    };
+
     return (
         <div className="bus-layout">
             {deckLabel && <div className="deck-label">{deckLabel}</div>}
@@ -289,13 +311,16 @@ const SingleDeck = ({
                     <div className="seat-pair left">
                         {['A', 'B'].map(col => {
                             const seatId = `${prefix}${row}${col}`;
-                            const isSelected = selectedSeats.includes(seatId);
+                            const status = getSeatStatus(seatId);
                             return (
                                 <button
                                     key={seatId}
-                                    className={`seat ${isSelected ? 'selected' : 'available'}`}
-                                    onClick={() => onSeatSelect(seatId)}
-                                    title={`Seat ${seatId}`}
+                                    className={`seat ${status}`}
+                                    onClick={() => handleSeatClick(seatId)}
+                                    disabled={status === 'occupied' || status === 'held'}
+                                    title={status === 'occupied' ? `Seat ${seatId} - Booked` :
+                                           status === 'held' ? `Seat ${seatId} - Being reserved` :
+                                           `Seat ${seatId}`}
                                 >
                                     {seatId}
                                 </button>
@@ -306,13 +331,16 @@ const SingleDeck = ({
                     <div className="seat-pair right">
                         {['C', 'D'].map(col => {
                             const seatId = `${prefix}${row}${col}`;
-                            const isSelected = selectedSeats.includes(seatId);
+                            const status = getSeatStatus(seatId);
                             return (
                                 <button
                                     key={seatId}
-                                    className={`seat ${isSelected ? 'selected' : 'available'}`}
-                                    onClick={() => onSeatSelect(seatId)}
-                                    title={`Seat ${seatId}`}
+                                    className={`seat ${status}`}
+                                    onClick={() => handleSeatClick(seatId)}
+                                    disabled={status === 'occupied' || status === 'held'}
+                                    title={status === 'occupied' ? `Seat ${seatId} - Booked` :
+                                           status === 'held' ? `Seat ${seatId} - Being reserved` :
+                                           `Seat ${seatId}`}
                                 >
                                     {seatId}
                                 </button>
@@ -328,14 +356,20 @@ const SingleDeck = ({
 // --- Seat Map Component ---
 const SeatMap = ({
     selectedSeats,
+    occupiedSeats,
+    heldSeats,
     onSeatSelect,
     capacity,
-    vehicleClass
+    vehicleClass,
+    loading
 }: {
     selectedSeats: string[],
+    occupiedSeats: string[],
+    heldSeats: string[],
     onSeatSelect: (seat: string) => void,
     capacity: number,
-    vehicleClass?: string
+    vehicleClass?: string,
+    loading?: boolean
 }) => {
     const isDoubleDecker = vehicleClass === 'DOUBLE_DECKER';
 
@@ -345,18 +379,29 @@ const SeatMap = ({
     const rowsPerFloor = Math.ceil(seatsPerFloor / 4);
     const rows = Array.from({ length: rowsPerFloor }, (_, i) => i + 1);
 
+    if (loading) {
+        return (
+            <div className="seat-map-container">
+                <p style={{ textAlign: 'center', padding: '2rem' }}>Loading seat availability...</p>
+            </div>
+        );
+    }
+
     return (
         <div className="seat-map-container">
             <div className="seat-map-legend">
                 <div className="legend-item"><span className="seat available"></span> Available</div>
                 <div className="legend-item"><span className="seat selected"></span> Selected</div>
-                <div className="legend-item"><span className="seat occupied"></span> Occupied</div>
+                <div className="legend-item"><span className="seat occupied"></span> Booked</div>
+                <div className="legend-item"><span className="seat held"></span> Reserved</div>
             </div>
 
             {isDoubleDecker ? (
                 <div className="double-decker-layout">
                     <SingleDeck
                         selectedSeats={selectedSeats}
+                        occupiedSeats={occupiedSeats}
+                        heldSeats={heldSeats}
                         onSeatSelect={onSeatSelect}
                         rows={rows}
                         prefix="L"
@@ -364,6 +409,8 @@ const SeatMap = ({
                     />
                     <SingleDeck
                         selectedSeats={selectedSeats}
+                        occupiedSeats={occupiedSeats}
+                        heldSeats={heldSeats}
                         onSeatSelect={onSeatSelect}
                         rows={rows}
                         prefix="U"
@@ -373,6 +420,8 @@ const SeatMap = ({
             ) : (
                 <SingleDeck
                     selectedSeats={selectedSeats}
+                    occupiedSeats={occupiedSeats}
+                    heldSeats={heldSeats}
                     onSeatSelect={onSeatSelect}
                     rows={rows}
                 />
@@ -389,6 +438,7 @@ const SeatMap = ({
 export default function BookingPage() {
     const location = useLocation();
     const navigate = useNavigate();
+    const { user, isAuthenticated } = useAuth();
     const state = location.state as LocationState;
 
     useEffect(() => {
@@ -400,13 +450,26 @@ export default function BookingPage() {
     const { route, timetable, passengerBreakdown, isRoundTrip, returnRoute, returnTimetable, returnDate } = state;
 
     // Initialize passengers based on breakdown
-    const [passengers, setPassengers] = useState<Passenger[]>(() => {
+    const [passengers, setPassengers] = useState<Passenger[]>([]);
+
+    // Initialize passengers when component mounts or user changes
+    useEffect(() => {
         const initialPassengers: Passenger[] = [];
         let idCounter = 0;
 
         // Add Adults
         for (let i = 0; i < (passengerBreakdown?.adult || 0); i++) {
-            initialPassengers.push({ id: idCounter++, type: 'Adult', firstName: '', lastName: '' });
+            // Auto-populate first adult passenger with authenticated user data
+            if (idCounter === 0 && isAuthenticated && user) {
+                initialPassengers.push({
+                    id: idCounter++,
+                    type: 'Adult',
+                    firstName: user.firstName || '',
+                    lastName: user.lastName || ''
+                });
+            } else {
+                initialPassengers.push({ id: idCounter++, type: 'Adult', firstName: '', lastName: '' });
+            }
         }
         // Add Children
         for (let i = 0; i < (passengerBreakdown?.child || 0); i++) {
@@ -418,14 +481,24 @@ export default function BookingPage() {
         }
 
         // Fallback if no breakdown provided (legacy support)
-        if (initialPassengers.length === 0 && state.passengers > 0) {
+        if (initialPassengers.length === 0 && state?.passengers > 0) {
             for (let i = 0; i < state.passengers; i++) {
-                initialPassengers.push({ id: i, type: 'Adult', firstName: '', lastName: '' });
+                // Auto-populate first passenger with authenticated user data
+                if (i === 0 && isAuthenticated && user) {
+                    initialPassengers.push({
+                        id: i,
+                        type: 'Adult',
+                        firstName: user.firstName || '',
+                        lastName: user.lastName || ''
+                    });
+                } else {
+                    initialPassengers.push({ id: i, type: 'Adult', firstName: '', lastName: '' });
+                }
             }
         }
 
-        return initialPassengers;
-    });
+        setPassengers(initialPassengers);
+    }, [isAuthenticated, user, passengerBreakdown, state?.passengers]);
 
     const [luggageCount, setLuggageCount] = useState(0);
     const [seatSelectionOpen, setSeatSelectionOpen] = useState(false);
@@ -433,10 +506,86 @@ export default function BookingPage() {
     const [paymentSuccess, setPaymentSuccess] = useState(false);
     const [paymentError, setPaymentError] = useState<string | null>(null);
 
+    // Seat availability state
+    const [occupiedSeats, setOccupiedSeats] = useState<string[]>([]);
+    const [heldSeats, setHeldSeats] = useState<string[]>([]);
+    const [seatsLoading, setSeatsLoading] = useState(false);
+    const [sessionId] = useState(() => getSessionId());
+
     // Currency state
     const [selectedCurrency, setSelectedCurrency] = useState<Currency>('RON');
     const [exchangeRates, setExchangeRates] = useState<ExchangeRates>({ EUR: 4.97, USD: 4.56, GBP: 5.78 });
     const [ratesLoading, setRatesLoading] = useState(true);
+
+    // Helper to combine date and time string into LocalDateTime format (no timezone)
+    const combineDateAndTime = (dateStr: string, timeStr: string) => {
+        // dateStr is like "2023-10-25"
+        // timeStr is ISO string "2023-10-25T10:30:00" or just time part
+
+        // Create a date object from the time string (which has the correct time but potentially wrong date)
+        const timeDate = new Date(timeStr);
+
+        // Parse the selected date components
+        const [year, month, day] = dateStr.split('-').map(Number);
+
+        // Extract time components (use UTC to avoid timezone shifts from the stored timetable)
+        const hours = timeDate.getUTCHours();
+        const minutes = timeDate.getUTCMinutes();
+        const seconds = timeDate.getUTCSeconds();
+
+        // Format as LocalDateTime (YYYY-MM-DDTHH:MM:SS) without timezone suffix
+        const pad = (n: number) => n.toString().padStart(2, '0');
+        return `${year}-${pad(month)}-${pad(day)}T${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+    };
+
+    // Get departure time from timetable
+    const getDepartureTimeISO = useCallback(() => {
+        const originStop = timetable?.timetableStops?.find(s => s.station.id === route.originStation.id);
+        if (!originStop?.departureTime) return null;
+        
+        // Combine the selected date (state.date) with the time from the timetable
+        return combineDateAndTime(state.date, originStop.departureTime);
+    }, [timetable, route, state.date]);
+
+    // Fetch seat availability when seat selection opens
+    useEffect(() => {
+        const fetchSeatAvailability = async () => {
+            if (!seatSelectionOpen || !route?.id) return;
+
+            const departureTimeISO = getDepartureTimeISO();
+            if (!departureTimeISO) return;
+
+            setSeatsLoading(true);
+            try {
+                const availability = await seatApi.getOccupiedSeats(
+                    route.id,
+                    departureTimeISO,
+                    sessionId
+                );
+                setOccupiedSeats(availability.occupiedSeats);
+                setHeldSeats(availability.heldSeats);
+            } catch (error) {
+                console.error('Failed to fetch seat availability:', error);
+            } finally {
+                setSeatsLoading(false);
+            }
+        };
+
+        fetchSeatAvailability();
+        // Refresh every 30 seconds while seat selection is open
+        const interval = seatSelectionOpen ? setInterval(fetchSeatAvailability, 30000) : undefined;
+        return () => {
+            if (interval) clearInterval(interval);
+        };
+    }, [seatSelectionOpen, route?.id, getDepartureTimeISO, sessionId]);
+
+    // Release seat holds when leaving the page
+    useEffect(() => {
+        return () => {
+            // Cleanup on unmount - release any held seats
+            seatApi.releaseHolds(sessionId).catch(console.error);
+        };
+    }, [sessionId]);
 
     // Fetch BNR exchange rates from backend
     useEffect(() => {
@@ -452,7 +601,7 @@ export default function BookingPage() {
                     GBP: rates.GBP || 5.78
                 });
             } catch (error) {
-                console.log('Using fallback exchange rates');
+                // Using fallback exchange rates
                 setExchangeRates({ EUR: 4.97, USD: 4.56, GBP: 5.78 });
             } finally {
                 setRatesLoading(false);
@@ -480,7 +629,7 @@ export default function BookingPage() {
         ? (returnRoute.distance || 0) * (returnRoute.pricePerKm || PRICE_PER_KM)
         : 0;
 
-    const calculateTotal = () => {
+    const calculatePriceBreakdown = () => {
         // Outbound tickets
         const outboundTicketsTotal = passengers.reduce((sum, p) => {
             return sum + (basePrice * PASSENGER_MULTIPLIERS[p.type]);
@@ -494,11 +643,28 @@ export default function BookingPage() {
         const extrasTotal = luggageCount * LUGGAGE_PRICE;
         const seatsTotal = selectedSeats.length * SEAT_RESERVATION_PRICE;
 
-        // Service fee applied once for round-trip, not doubled
-        return outboundTicketsTotal + returnTicketsTotal + extrasTotal + seatsTotal + SERVICE_FEE;
+        // Subtotal before VAT (service fee is included in VAT base)
+        const subtotal = outboundTicketsTotal + returnTicketsTotal + extrasTotal + seatsTotal + SERVICE_FEE;
+
+        // Calculate VAT (19% for transport services in Romania)
+        const vatAmount = subtotal * VAT_RATE;
+
+        // Total with VAT
+        const total = subtotal + vatAmount;
+
+        return {
+            outboundTicketsTotal,
+            returnTicketsTotal,
+            extrasTotal,
+            seatsTotal,
+            subtotal,
+            vatAmount,
+            total
+        };
     };
 
-    const total = calculateTotal();
+    const priceBreakdown = calculatePriceBreakdown();
+    const total = priceBreakdown.total;
 
     // Handlers
     const handlePassengerChange = (id: number, field: keyof Passenger, value: string) => {
@@ -507,17 +673,50 @@ export default function BookingPage() {
         ));
     };
 
-    const handleSeatSelect = (seatId: string) => {
+    const handleSeatSelect = async (seatId: string) => {
+        const departureTimeISO = getDepartureTimeISO();
+        if (!departureTimeISO) return;
+
+        let newSelectedSeats: string[];
         if (selectedSeats.includes(seatId)) {
-            setSelectedSeats(prev => prev.filter(s => s !== seatId));
+            // Deselecting a seat
+            newSelectedSeats = selectedSeats.filter(s => s !== seatId);
         } else {
             if (selectedSeats.length < passengers.length) {
-                setSelectedSeats(prev => [...prev, seatId]);
+                newSelectedSeats = [...selectedSeats, seatId];
             } else {
-                // Replace the last selected seat if max reached (simple logic)
-                // Or alert user. Here we'll just ignore or could replace first.
-                // Let's replace the first one to keep it simple for user to change mind
-                setSelectedSeats(prev => [...prev.slice(1), seatId]);
+                // Replace the first selected seat if max reached
+                newSelectedSeats = [...selectedSeats.slice(1), seatId];
+            }
+        }
+
+        // Optimistically update UI
+        setSelectedSeats(newSelectedSeats);
+
+        // Call API to hold/release seats
+        if (newSelectedSeats.length > 0) {
+            try {
+                const response = await seatApi.holdSeats({
+                    routeId: route.id,
+                    departureTime: departureTimeISO,
+                    seatNumbers: newSelectedSeats,
+                    sessionId
+                });
+
+                if (!response.success) {
+                    console.warn('Some seats could not be held:', response.failedSeats);
+                    // Remove failed seats from selection
+                    setSelectedSeats(response.heldSeats);
+                }
+            } catch (error) {
+                console.error('Failed to hold seats:', error);
+            }
+        } else {
+            // Release all holds if no seats selected
+            try {
+                await seatApi.releaseHolds(sessionId);
+            } catch (error) {
+                console.error('Failed to release seats:', error);
             }
         }
     };
@@ -529,9 +728,122 @@ export default function BookingPage() {
     const departureTime = originStop?.departureTime ? new Date(originStop.departureTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : "--:--";
     const arrivalTime = destStop?.arrivalTime ? new Date(destStop.arrivalTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : "--:--";
 
-    const handlePaymentSuccess = () => {
-        setPaymentSuccess(true);
-        // TODO: Create reservation in backend
+    const handlePaymentSuccess = async () => {
+        try {
+            // Get departure and arrival times from timetable
+            const originStop = timetable.timetableStops.find(s => s.station.id === route.originStation.id);
+            const destStop = timetable.timetableStops.find(s => s.station.id === route.destinationStation.id);
+
+            if (!originStop?.departureTime || !destStop?.arrivalTime) {
+                throw new Error('Missing trip time information');
+            }
+
+            // Map frontend passenger type to backend enum
+            const passengerCategoryMap: Record<string, 'ADULT' | 'CHILD' | 'STUDENT'> = {
+                'Adult': 'ADULT',
+                'Child': 'CHILD',
+                'Student': 'STUDENT'
+            };
+
+            // Map vehicle class
+            const vehicleClassMap: Record<string, 'STANDARD' | 'COACH' | 'MINI_BUS' | 'DOUBLE_DECKER'> = {
+                'STANDARD': 'STANDARD',
+                'COACH': 'COACH',
+                'MINI_BUS': 'MINI_BUS',
+                'DOUBLE_DECKER': 'DOUBLE_DECKER'
+            };
+
+            // Build passenger names (comma-separated for multiple)
+            const passengerNames = passengers
+                .map(p => `${p.firstName} ${p.lastName}`.trim())
+                .filter(name => name.length > 0)
+                .join(', ') || 'Guest';
+
+            // Calculate correct departure/arrival datetimes
+            const departureDateTime = combineDateAndTime(state.date, originStop.departureTime);
+            
+            // For arrival, we need to handle overnight trips
+            // If arrival time is earlier than departure time (in hours), it means next day
+            const depTime = new Date(originStop.departureTime);
+            const arrTime = new Date(destStop.arrivalTime);
+            
+            let arrivalDateStr = state.date;
+            if (arrTime.getHours() < depTime.getHours() || 
+               (arrTime.getHours() === depTime.getHours() && arrTime.getMinutes() < depTime.getMinutes())) {
+                // Arrival is next day
+                const nextDay = new Date(state.date);
+                nextDay.setDate(nextDay.getDate() + 1);
+                arrivalDateStr = nextDay.toISOString().split('T')[0];
+            }
+            
+            const arrivalDateTime = combineDateAndTime(arrivalDateStr, destStop.arrivalTime);
+
+            // Create reservation request for outbound trip
+            const outboundRequest: CreateReservationRequest = {
+                routeId: route.id,
+                passengerName: passengerNames,
+                seatCount: passengers.length,
+                departureTime: departureDateTime,
+                arrivalTime: arrivalDateTime,
+                passengerCategory: passengerCategoryMap[passengers[0]?.type] || 'ADULT',
+                vehicleClass: vehicleClassMap[route.vehicleClass || 'STANDARD'] || 'STANDARD',
+                selectedSeats: selectedSeats.length > 0 ? selectedSeats : undefined,
+                sessionId: sessionId,
+                totalPrice: total,
+                currency: selectedCurrency
+            };
+
+            await bookingApi.createReservation(outboundRequest);
+
+            // Create return trip reservation if round-trip
+            if (isRoundTrip && returnRoute && returnTimetable && returnDate) {
+                const returnOriginStop = returnTimetable.timetableStops.find(
+                    s => s.station.id === returnRoute.originStation.id
+                );
+                const returnDestStop = returnTimetable.timetableStops.find(
+                    s => s.station.id === returnRoute.destinationStation.id
+                );
+
+                if (returnOriginStop?.departureTime && returnDestStop?.arrivalTime) {
+                    const returnDepDateTime = combineDateAndTime(returnDate, returnOriginStop.departureTime);
+                    
+                    // Handle overnight return
+                    const retDepTime = new Date(returnOriginStop.departureTime);
+                    const retArrTime = new Date(returnDestStop.arrivalTime);
+                    
+                    let returnArrivalDateStr = returnDate;
+                    if (retArrTime.getHours() < retDepTime.getHours() || 
+                       (retArrTime.getHours() === retDepTime.getHours() && retArrTime.getMinutes() < retDepTime.getMinutes())) {
+                        const nextDay = new Date(returnDate);
+                        nextDay.setDate(nextDay.getDate() + 1);
+                        returnArrivalDateStr = nextDay.toISOString().split('T')[0];
+                    }
+                    
+                    const returnArrDateTime = combineDateAndTime(returnArrivalDateStr, returnDestStop.arrivalTime);
+
+                    const returnRequest: CreateReservationRequest = {
+                        routeId: returnRoute.id,
+                        passengerName: passengerNames,
+                        seatCount: passengers.length,
+                        departureTime: returnDepDateTime,
+                        arrivalTime: returnArrDateTime,
+                        passengerCategory: passengerCategoryMap[passengers[0]?.type] || 'ADULT',
+                        vehicleClass: vehicleClassMap[returnRoute.vehicleClass || 'STANDARD'] || 'STANDARD',
+                        sessionId: sessionId,
+                        totalPrice: 0, // Price already included in outbound total
+                        currency: selectedCurrency
+                    };
+
+                    await bookingApi.createReservation(returnRequest);
+                }
+            }
+
+            setPaymentSuccess(true);
+        } catch (error) {
+            console.error('Failed to create reservation:', error);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            setPaymentError(`Payment succeeded but failed to save booking: ${errorMessage}`);
+        }
     };
 
     const handlePaymentError = (error: string) => {
@@ -638,9 +950,12 @@ export default function BookingPage() {
                         {seatSelectionOpen && (
                             <SeatMap
                                 selectedSeats={selectedSeats}
+                                occupiedSeats={occupiedSeats}
+                                heldSeats={heldSeats}
                                 onSeatSelect={handleSeatSelect}
                                 capacity={route.vehicleCapacity || 50}
                                 vehicleClass={route.vehicleClass}
+                                loading={seatsLoading}
                             />
                         )}
                     </div>
@@ -819,6 +1134,16 @@ export default function BookingPage() {
                             <div className="price-row">
                                 <span>Service Fee</span>
                                 <span>{formatPrice(SERVICE_FEE)}</span>
+                            </div>
+
+                            <div className="price-row subtotal">
+                                <span>Subtotal</span>
+                                <span>{formatPrice(priceBreakdown.subtotal)}</span>
+                            </div>
+
+                            <div className="price-row vat">
+                                <span>VAT (21%)</span>
+                                <span>{formatPrice(priceBreakdown.vatAmount)}</span>
                             </div>
 
                             <div className="price-row total">

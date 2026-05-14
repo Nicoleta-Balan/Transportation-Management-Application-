@@ -7,6 +7,7 @@ import multitier.trans.model.enums.PassengerCategory;
 import multitier.trans.model.enums.VehicleClass;
 import lombok.Data;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data  // Lombok: Generates getters, setters, toString, equals, hashCode
 public class CreateReservationRequest {
@@ -31,4 +32,13 @@ public class CreateReservationRequest {
 
     @NotNull(message = "Vehicle class must be specified")
     private VehicleClass vehicleClass;
+    
+    private List<String> selectedSeats;
+
+    private String sessionId;
+
+    // Payment details
+    private java.math.BigDecimal totalPrice;
+
+    private String currency;
 }

@@ -13,6 +13,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -28,21 +29,18 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 public class StationControllerTest {
 
     @Autowired
-    private MockMvc mockMvc; // A tool to fake HTTP requests
+    private MockMvc mockMvc;
 
     @Autowired
-    private ObjectMapper objectMapper; // A tool to convert Java objects to JSON
+    private ObjectMapper objectMapper;
 
     @MockBean
-    private StationService stationService; // A "fake" version of the service
-
-    // Note: StationRepository is NOT mocked - Spring Data REST needs real repositories
-    // to initialize its handler mapping for @RepositoryRestController
+    private StationService stationService;
 
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     public void whenCreateStation_withInvalidName_thenReturns400BadRequest() throws Exception {
-        // 1. Arrange: Create a station request with an invalid name ("X" has 1 char, rule needs 2)
         CreateStationRequest invalidRequest = new CreateStationRequest();
         invalidRequest.setName("X");
         invalidRequest.setDescription("Valid Description");
@@ -51,16 +49,15 @@ public class StationControllerTest {
         invalidRequest.setLongitude(27.56716);
         invalidRequest.setStatus(StationStatus.ACTIVE);
 
-        // 2. Act & 3. Assert
-        mockMvc.perform(post("/api/stations") // Send a POST request
-                        .contentType(MediaType.APPLICATION_JSON) // as JSON
-                        .content(objectMapper.writeValueAsString(invalidRequest))) // with the invalid data
-                .andExpect(status().isBadRequest()); // Assert that we get a 400 Bad Request
+        mockMvc.perform(post("/api/stations")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(invalidRequest)))
+                .andExpect(status().isBadRequest());
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     public void whenCreateStation_withNullName_thenReturns400BadRequest() throws Exception {
-        // 1. Arrange: Create a station request with a null name
         CreateStationRequest invalidRequest = new CreateStationRequest();
         invalidRequest.setName(null);
         invalidRequest.setDescription("Valid Description");
@@ -69,16 +66,15 @@ public class StationControllerTest {
         invalidRequest.setLongitude(27.56716);
         invalidRequest.setStatus(StationStatus.ACTIVE);
 
-        // 2. Act & 3. Assert
         mockMvc.perform(post("/api/stations")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(invalidRequest)))
-                .andExpect(status().isBadRequest()); // Assert that we get a 400 Bad Request
+                .andExpect(status().isBadRequest());
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     public void whenCreateStation_withValidData_thenReturns201Created() throws Exception {
-        // 1. Arrange: Create a station request with valid data
         CreateStationRequest validRequest = new CreateStationRequest();
         validRequest.setName("Iasi");
         validRequest.setDescription("Main Bus Station");
@@ -87,19 +83,18 @@ public class StationControllerTest {
         validRequest.setLongitude(27.56716);
         validRequest.setStatus(StationStatus.ACTIVE);
 
-        // Mock the service response
         Station savedStation = new Station("Iasi", "Main Bus Station", "address", 47.1788, 27.56716, StationStatus.ACTIVE);
         savedStation.setId(1L);
         when(stationService.createStation(any(CreateStationRequest.class))).thenReturn(savedStation);
 
-        // 2. Act & 3. Assert
         mockMvc.perform(post("/api/stations")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(validRequest)))
-                .andExpect(status().isCreated()); // Assert that we get a 201 Created
+                .andExpect(status().isCreated());
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     public void whenUpdateStation_withValidData_thenReturns200Ok() throws Exception {
         UpdateStationRequest updateRequest = new UpdateStationRequest();
         updateRequest.setDescription("Updated description");
@@ -108,8 +103,7 @@ public class StationControllerTest {
         updateRequest.setLongitude(28.56716);
         updateRequest.setStatus(StationStatus.INACTIVE);
 
-        // Mock valid response
-        Station updatedStation = new Station("Iasi", "Updated description", "456 Updated Street", 
+        Station updatedStation = new Station("Iasi", "Updated description", "456 Updated Street",
                                               48.1788, 28.56716, StationStatus.INACTIVE);
         updatedStation.setId(1L);
         when(stationService.updateStation(eq(1L), any(UpdateStationRequest.class)))
@@ -118,10 +112,11 @@ public class StationControllerTest {
         mockMvc.perform(put("/api/stations/1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateRequest)))
-                .andExpect(status().isOk()); // 200 OK
+                .andExpect(status().isOk());
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     public void whenUpdateStation_withInvalidId_thenReturns404NotFound() throws Exception {
         UpdateStationRequest updateRequest = new UpdateStationRequest();
         updateRequest.setDescription("Updated description");
@@ -130,30 +125,64 @@ public class StationControllerTest {
         updateRequest.setLongitude(28.56716);
         updateRequest.setStatus(StationStatus.INACTIVE);
 
-        // Mock invalid ID - service now throws ResourceNotFoundException
         when(stationService.updateStation(eq(999L), any(UpdateStationRequest.class)))
                 .thenThrow(new ResourceNotFoundException("Station", 999L));
 
         mockMvc.perform(put("/api/stations/999")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateRequest)))
-                .andExpect(status().isNotFound()); // 404 Not Found
+                .andExpect(status().isNotFound());
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     public void whenDeleteStation_withValidId_thenReturns204NoContent() throws Exception {
         doNothing().when(stationService).deleteStation(1L);
 
         mockMvc.perform(delete("/api/stations/1"))
-                .andExpect(status().isNoContent()); // 204 No Content
+                .andExpect(status().isNoContent());
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     public void whenDeleteStation_withInvalidId_thenReturns404NotFound() throws Exception {
         doThrow(new ResourceNotFoundException("Station", 999L))
                 .when(stationService).deleteStation(999L);
 
         mockMvc.perform(delete("/api/stations/999"))
-                .andExpect(status().isNotFound()); // 404 Not Found
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    public void whenCreateStation_withoutAuth_thenReturns403Forbidden() throws Exception {
+        CreateStationRequest validRequest = new CreateStationRequest();
+        validRequest.setName("Iasi");
+        validRequest.setDescription("Main Bus Station");
+        validRequest.setAddress("123 Main Street, Iasi");
+        validRequest.setLatitude(47.1788);
+        validRequest.setLongitude(27.56716);
+        validRequest.setStatus(StationStatus.ACTIVE);
+
+        mockMvc.perform(post("/api/stations")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(validRequest)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "USER")
+    public void whenCreateStation_withUserRole_thenReturns403Forbidden() throws Exception {
+        CreateStationRequest validRequest = new CreateStationRequest();
+        validRequest.setName("Iasi");
+        validRequest.setDescription("Main Bus Station");
+        validRequest.setAddress("123 Main Street, Iasi");
+        validRequest.setLatitude(47.1788);
+        validRequest.setLongitude(27.56716);
+        validRequest.setStatus(StationStatus.ACTIVE);
+
+        mockMvc.perform(post("/api/stations")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(validRequest)))
+                .andExpect(status().isForbidden());
     }
 }
