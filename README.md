@@ -12,7 +12,6 @@ Database: PostgreSQL 15
 Deployment: Docker (Docker Compose)
 CI/CD: GitHub Actions
 
-
 Objectives
 Improve efficiency in route and booking management
 Provide real-time access to transport data
@@ -26,42 +25,6 @@ Backend (Business Logic Layer) – Java Spring Boot REST API (Port 8085)
 Database (Data Layer) – PostgreSQL for persistent data storage (Port 5438)
 
 C4 Diagram (Level 2: Containers)
-
-This is the logical blueprint of how the system components interact.
-
-+-------------------------------------------------------------+
-| User (Dispatcher) [Actor]                                   |
-|                                                             |
-|   | Opens in browser                                        |
-|   | via Port 5173                                           |
-|   v                                                         |
-| +---------------------------------------------------------+ |
-| |   +-------------------------+                           | |
-| |   | Frontend Application    |                           | |
-| |   | (React)                 |                           | |
-| |   | [Container]             |                           | |
-| |   +-------------------------+                           | |
-| |               |                                         | |
-| |               | API Calls (HTTP/JSON)                   | |
-| |               | to Port 8085                            | |
-| |               v                                         | |
-| |   +-------------------------+                           | |
-| |   | Backend API             |                           | |
-| |   | (Spring Boot App)       |                           | |
-| |   | [Container]             |                           | |
-| |   +-------------------------+                           | |
-| |               |                                         | |
-| |               | Reads/Writes data (using JDBC)          | |
-| |               v                                         | |
-| |   +-------------------------+                           | |
-| |   | Database                |                           | |
-| |   | (PostgreSQL)            |                           | |
-| |   | [Container]             |                           | |
-| |   +-------------------------+                           | |
-| |                                                         | |
-| +---------------------------------------------------------+ |
-+-------------------------------------------------------------+
-
 
 Deliverables
 
